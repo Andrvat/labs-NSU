@@ -6,9 +6,9 @@
 #include "OperationsArrayOfChar.h"
 
 int getNextPermutation(struct TCharSequence *charSequence) {
-    int firstIdx = getFirstIdxForReplacement(charSequence);
-    // Если указывает на -1, то нельзя получить следующую перестановку
-    if (firstIdx == -1) {
+    int haveNextPermutation = 1;
+    int firstIdx = getFirstIdxForReplacement(charSequence, &haveNextPermutation);
+    if (!haveNextPermutation) {
         return 0;
     }
     unsigned int secondIdx = getSecondIdxForReplacement(charSequence, firstIdx);
@@ -20,10 +20,8 @@ int getNextPermutation(struct TCharSequence *charSequence) {
 
 void printMultiplePermutations(struct TCharSequence *charSequence, const unsigned int number) {
     unsigned int counterOfPermutations = 0;
-    // Получаем number перестановок
     while (counterOfPermutations < number) {
         int haveNextPermutation = getNextPermutation(charSequence);
-        // Проверка на то, что возможно получить следующую перестановку
         if (!haveNextPermutation) {
             return;
         }
@@ -32,12 +30,13 @@ void printMultiplePermutations(struct TCharSequence *charSequence, const unsigne
     }
 }
 
-int getFirstIdxForReplacement(const struct TCharSequence *charSequence) {
+int getFirstIdxForReplacement(const struct TCharSequence *charSequence, int *haveNextPermutation) {
     int idxForReplacement = (int) charSequence->size - 2;
     while (charSequence->sequence[idxForReplacement] >= charSequence->sequence[idxForReplacement + 1]) {
         idxForReplacement--;
         // Когда больше перестановок сделать нельзя, индекс выходит за пределы последовательности
         if (idxForReplacement < 0) {
+            *haveNextPermutation = 0;
             return -1;
         }
     }

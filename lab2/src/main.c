@@ -10,12 +10,13 @@
 int main(void) {
     struct TCharSequence charSequence;
     int numberOfPermutations;
-    int checkingForSequenceSize = inputCharSequence(&charSequence); // enter your sequence
+    int isLengthAcceptable = 1;
+    inputCharSequence(&charSequence, &isLengthAcceptable);
     if (!scanf("%d", &numberOfPermutations)) {
         printf("%s\n", "bad input");
         return EXIT_SUCCESS;
     }
-    if (!checkInputForCorrectSequence(&charSequence) || !checkingForSequenceSize) {
+    if (!checkInputForCorrectSequence(&charSequence) || !isLengthAcceptable) {
         printf("%s", "bad input");
         return EXIT_SUCCESS;
     }

@@ -10,7 +10,7 @@ int getNextPermutation(struct TCharSequence *charSequence);
 
 void printMultiplePermutations(struct TCharSequence *charSequence, unsigned int number);
 
-int getFirstIdxForReplacement(const struct TCharSequence *charSequence);
+int getFirstIdxForReplacement(const struct TCharSequence *charSequence, int *haveNextPermutation);
 
 unsigned int getSecondIdxForReplacement(const struct TCharSequence *charSequence, int firstIdxForReplacement);
 

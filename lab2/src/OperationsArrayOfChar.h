@@ -11,11 +11,11 @@ struct TCharSequence {
     unsigned int size;
 };
 
-void swapTwoCharacters(char *x, char *y);
+void swapTwoCharacters(char *firstChar, char *secondChar);
 
-int inputCharSequence(struct TCharSequence *charSequence);
+void inputCharSequence(struct TCharSequence *charSequence, int *isLengthAcceptable);
 
-void printTCharSequence(const struct TCharSequence *charSequence);
+        void printTCharSequence(const struct TCharSequence *charSequence);
 
 int checkInputForCorrectSequence(const struct TCharSequence *charSequence);
 
