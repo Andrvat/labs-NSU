@@ -1,0 +1,32 @@
+#IncludeRegexLine: ^[ 	]*[#%][ 	]*(include|import)[ 	]*[<"]([^">]+)([">])
+
+#IncludeRegexScan: ^.*$
+
+#IncludeRegexComplain: ^$
+
+#IncludeRegexTransform: 
+
+C:/template/lab2/src/AlgorithmOfPermutation.c
+AlgorithmOfPermutation.h
+C:/template/lab2/src/AlgorithmOfPermutation.h
+OperationsArrayOfChar.h
+C:/template/lab2/src/OperationsArrayOfChar.h
+
+C:/template/lab2/src/AlgorithmOfPermutation.h
+OperationsArrayOfChar.h
+C:/template/lab2/src/OperationsArrayOfChar.h
+
+C:/template/lab2/src/OperationsArrayOfChar.h
+
+C:/template/lab2/src/main.c
+stdlib.h
+-
+stdio.h
+-
+string.h
+-
+OperationsArrayOfChar.h
+C:/template/lab2/src/OperationsArrayOfChar.h
+AlgorithmOfPermutation.h
+C:/template/lab2/src/AlgorithmOfPermutation.h
+
