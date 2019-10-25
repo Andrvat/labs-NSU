@@ -5,35 +5,35 @@
 #include "AlgorithmOfPermutation.h"
 #include "OperationsArrayOfChar.h"
 
-int GetNextPermutation(struct TCharSequence *charSequence) {
-    int firstIdx = GetFirstIdxForReplacement(charSequence);
+int getNextPermutation(struct TCharSequence *charSequence) {
+    int firstIdx = getFirstIdxForReplacement(charSequence);
     // Если указывает на -1, то нельзя получить следующую перестановку
     if (firstIdx == -1) {
         return 0;
     }
-    int secondIdx = GetSecondIdxForReplacement(charSequence, firstIdx);
-    SwapTwoCharacters(&charSequence->sequence[firstIdx],
+    unsigned int secondIdx = getSecondIdxForReplacement(charSequence, firstIdx);
+    swapTwoCharacters(&charSequence->sequence[firstIdx],
                       &charSequence->sequence[secondIdx]);
-    ReverseSequenceFromIdxToEnd(charSequence, firstIdx + 1);
+    reverseSequenceFromIdxToEnd(charSequence, firstIdx + 1);
     return 1;
 }
 
-void PrintMultiplePermutations(struct TCharSequence *charSequence, const unsigned int number) {
-    unsigned int counter = 0;
+void printMultiplePermutations(struct TCharSequence *charSequence, const unsigned int number) {
+    unsigned int counterOfPermutations = 0;
     // Получаем number перестановок
-    while (counter < number) {
-        int haveNextPermutation = GetNextPermutation(charSequence);
+    while (counterOfPermutations < number) {
+        int haveNextPermutation = getNextPermutation(charSequence);
         // Проверка на то, что возможно получить следующую перестановку
         if (!haveNextPermutation) {
-            break;
+            return;
         }
-        PrintTCharSequence(charSequence);
-        ++counter;
+        printTCharSequence(charSequence);
+        ++counterOfPermutations;
     }
 }
 
-int GetFirstIdxForReplacement(const struct TCharSequence *charSequence) {
-    int idxForReplacement = charSequence->size - 2;
+int getFirstIdxForReplacement(const struct TCharSequence *charSequence) {
+    int idxForReplacement = (int) charSequence->size - 2;
     while (charSequence->sequence[idxForReplacement] >= charSequence->sequence[idxForReplacement + 1]) {
         idxForReplacement--;
         // Когда больше перестановок сделать нельзя, индекс выходит за пределы последовательности
@@ -44,16 +44,16 @@ int GetFirstIdxForReplacement(const struct TCharSequence *charSequence) {
     return idxForReplacement;
 }
 
-int GetSecondIdxForReplacement(const struct TCharSequence *charSequence, const int firstIdxForReplacement) {
-    int idxForReplacement = charSequence->size - 1;;
+unsigned int getSecondIdxForReplacement(const struct TCharSequence *charSequence, const int firstIdxForReplacement) {
+    unsigned int idxForReplacement = charSequence->size - 1;;
     while (charSequence->sequence[idxForReplacement] <= charSequence->sequence[firstIdxForReplacement]) {
         idxForReplacement--;
     }
     return idxForReplacement;
 }
 
-void ReverseSequenceFromIdxToEnd(struct TCharSequence *charSequence, const int idxReverseFrom) {
+void reverseSequenceFromIdxToEnd(struct TCharSequence *charSequence, const int idxReverseFrom) {
     for (unsigned int idx = idxReverseFrom; idx < charSequence->size - 1; ++idx) {
-        SwapTwoCharacters(&charSequence->sequence[idx], &charSequence->sequence[idx + 1]);
+        swapTwoCharacters(&charSequence->sequence[idx], &charSequence->sequence[idx + 1]);
     }
 }

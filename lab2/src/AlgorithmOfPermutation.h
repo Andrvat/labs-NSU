@@ -6,12 +6,12 @@
 
 #include "OperationsArrayOfChar.h"
 
-int GetNextPermutation(struct TCharSequence *charSequence);
+int getNextPermutation(struct TCharSequence *charSequence);
 
-void PrintMultiplePermutations(struct TCharSequence *charSequence, const unsigned int number);
+void printMultiplePermutations(struct TCharSequence *charSequence, unsigned int number);
 
-int GetFirstIdxForReplacement(const struct TCharSequence *charSequence);
+int getFirstIdxForReplacement(const struct TCharSequence *charSequence);
 
-int GetSecondIdxForReplacement(const struct TCharSequence *charSequence, const int firstIdxForReplacement);
+unsigned int getSecondIdxForReplacement(const struct TCharSequence *charSequence, int firstIdxForReplacement);
 
-void ReverseSequenceFromIdxToEnd(struct TCharSequence *charSequence, const int idxReverseFrom);
+void reverseSequenceFromIdxToEnd(struct TCharSequence *charSequence, int idxReverseFrom);

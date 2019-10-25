@@ -8,19 +8,19 @@
 
 #include "OperationsArrayOfChar.h"
 
-void SwapTwoCharacters(char *x, char *y) {
+void swapTwoCharacters(char *x, char *y) {
     char copyOfX = *x;
     *x = *y;
     *y = copyOfX;
 }
 
-int InputTCharSequence(struct TCharSequence *charSequence) {
-    char currentCharacter = getchar();
+int inputCharSequence(struct TCharSequence *charSequence) {
+    char currentCharacter = (char) getchar();
     charSequence->size = 0;
     while (currentCharacter != '\n') {
         charSequence->sequence[charSequence->size] = currentCharacter;
         ++charSequence->size;
-        currentCharacter = getchar();
+        currentCharacter = (char) getchar();
         // Если длина текущей последовательности стала больше максимально возможной длины,
         // которую может хранить массив charSequence->sequence, то ввод считается неккоректным
         if (charSequence->size > MAX_TCHARSEQUENCE_SIZE) {
@@ -30,7 +30,7 @@ int InputTCharSequence(struct TCharSequence *charSequence) {
     return 1;
 }
 
-int CheckInputForCorrectSequence(const struct TCharSequence *charSequence) {
+int checkInputForCorrectSequence(const struct TCharSequence *charSequence) {
     // Если элемент всего 1, то проверку на то,
     // что последовательность состоит из одинаковых символов, совершать не нужно
     if (charSequence->size == 1) {
@@ -51,7 +51,7 @@ int CheckInputForCorrectSequence(const struct TCharSequence *charSequence) {
     return 1;
 }
 
-void PrintTCharSequence(const struct TCharSequence *charSequence) {
+void printTCharSequence(const struct TCharSequence *charSequence) {
     for (unsigned int idx = 0; idx < charSequence->size; ++idx) {
         printf("%c", charSequence->sequence[idx]);
     }

@@ -5,18 +5,20 @@
 #include "OperationsArrayOfChar.h"
 #include "AlgorithmOfPermutation.h"
 
+// Принцип работы алгоритма см. на https://ru.wikibooks.org/wiki/Реализации_алгоритмов/Алгоритм_Нарайаны
+
 int main(void) {
     struct TCharSequence charSequence;
     int numberOfPermutations;
-    int checkingForSequenceSize = InputTCharSequence(&charSequence); // enter your sequence
-    if (scanf("%d", &numberOfPermutations) != 1) {
+    int checkingForSequenceSize = inputCharSequence(&charSequence); // enter your sequence
+    if (!scanf("%d", &numberOfPermutations)) {
         printf("%s\n", "bad input");
         return EXIT_SUCCESS;
-    };
-    if (!CheckInputForCorrectSequence(&charSequence) || !checkingForSequenceSize) {
+    }
+    if (!checkInputForCorrectSequence(&charSequence) || !checkingForSequenceSize) {
         printf("%s", "bad input");
         return EXIT_SUCCESS;
     }
-    PrintMultiplePermutations(&charSequence, numberOfPermutations);
+    printMultiplePermutations(&charSequence, numberOfPermutations);
     return EXIT_SUCCESS;
 }
