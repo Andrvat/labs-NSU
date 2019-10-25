@@ -5,7 +5,7 @@
 #include "QuickSort.h"
 #include "ChangingOriginalArray.h"
 
-void QuickSort(struct ArrayOfNumbers *originalArray, int beginOfSorting, int endOfSorting) {
+void quickSort(struct ArrayOfNumbers *originalArray, int beginOfSorting, int endOfSorting) {
     int leftBorder = beginOfSorting;
     int rightBorder = endOfSorting;
     int pivot = originalArray->data[(beginOfSorting + endOfSorting) / 2];
@@ -17,15 +17,15 @@ void QuickSort(struct ArrayOfNumbers *originalArray, int beginOfSorting, int end
             --endOfSorting;
         }
         if (beginOfSorting <= endOfSorting) {
-            SwapTwoNumbers(&originalArray->data[endOfSorting], &originalArray->data[beginOfSorting]);
+            swapTwoNumbers(&originalArray->data[endOfSorting], &originalArray->data[beginOfSorting]);
             ++beginOfSorting;
             --endOfSorting;
         }
     }
     if (beginOfSorting < rightBorder) {
-        QuickSort(originalArray, beginOfSorting, rightBorder);
+        quickSort(originalArray, beginOfSorting, rightBorder);
     }
     if (endOfSorting > leftBorder) {
-        QuickSort(originalArray, leftBorder, endOfSorting);
+        quickSort(originalArray, leftBorder, endOfSorting);
     }
 }

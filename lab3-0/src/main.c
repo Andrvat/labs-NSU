@@ -5,10 +5,10 @@
 
 
 int main(void) {
-    struct ArrayOfNumbers originalArray = InputArrayOfNumbers();
-    QuickSort(&originalArray, 0, originalArray.size - 1);
-    PrintArrayOfNumbers(&originalArray);
-    FreeArraysMemory(&originalArray);
+    struct ArrayOfNumbers originalArray = inputArrayOfNumbers();
+    quickSort(&originalArray, 0, originalArray.size - 1);
+    printArrayOfNumbers(&originalArray);
+    freeArrayMemory(&originalArray);
     return EXIT_SUCCESS;
 }
 

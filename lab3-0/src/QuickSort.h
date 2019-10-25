@@ -6,4 +6,4 @@
 
 #include "ChangingOriginalArray.h"
 
-void QuickSort(struct ArrayOfNumbers *originalArray, int beginOfSorting, int endOfSorting);
+void quickSort(struct ArrayOfNumbers *originalArray, int beginOfSorting, int endOfSorting);

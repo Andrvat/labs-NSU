@@ -9,10 +9,10 @@ struct ArrayOfNumbers {
     int size;
 };
 
-void SwapTwoNumbers(int *firstNum, int *secondNum);
+void swapTwoNumbers(int *firstNum, int *secondNum);
 
-void PrintArrayOfNumbers(struct ArrayOfNumbers *originalArray);
+void printArrayOfNumbers(struct ArrayOfNumbers *originalArray);
 
-struct ArrayOfNumbers InputArrayOfNumbers();
+struct ArrayOfNumbers inputArrayOfNumbers(void);
 
-void FreeArraysMemory(struct ArrayOfNumbers *originalArray);
+void freeArrayMemory(struct ArrayOfNumbers *originalArray);
