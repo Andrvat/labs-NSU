@@ -1,24 +1,43 @@
 //
 // Created by Andrey Valitov on 19.09.2019.
 //
+#include "CharAndNumTransfer.h"
 
-int transferCharToNum(char element) {
-    // переводим в нижний регистр при необходимсоти
-    if (element <= 'Z' && element >= 'A') {
-        element = (char) (element - 'A' + 'a');
+int transferCharToNum(char character) {
+    if (character <= 'Z' && character >= 'A') {
+        character = translateCharacterToLowercase(character);
     }
-    if (element >= 'a') {
-        return element + 10 - 'a';
+    if (character >= 'a') {
+        return translateBaseNumberSystemLetterToNum(character);
     } else {
-        return element - '0';
+        return translateBaseNumberSystemCharNumberToNum(character);
     }
 }
 
-char transferNumToChar(int element) {
+char transferNumToChar(const int element) {
     if (element >= 10) {
-        return (char) (element - 10 + 'A');
+        return translateLetterToBaseNumberSystem(element);
     } else {
-        return (char) (element + '0');
+        return translateNumberToBaseNumberSystem(element);
     }
+}
 
+char translateCharacterToLowercase(const char character) {
+    return (char) (character - 'A' + 'a');
+}
+
+int translateBaseNumberSystemLetterToNum(const char character) {
+    return (int) character + 10 - 'a';
+}
+
+int translateBaseNumberSystemCharNumberToNum(const char character) {
+    return (int) character - '0';
+}
+
+char translateLetterToBaseNumberSystem(const int element) {
+    return (char) (element - 10 + 'A');
+}
+
+char translateNumberToBaseNumberSystem(const int element) {
+    return (char) (element + '0');
 }
