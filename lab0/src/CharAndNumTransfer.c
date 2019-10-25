@@ -2,10 +2,10 @@
 // Created by Andrey Valitov on 19.09.2019.
 //
 
-int CharToNum(char element) {
+int transferCharToNum(char element) {
     // переводим в нижний регистр при необходимсоти
     if (element <= 'Z' && element >= 'A') {
-        element = element - 'A' + 'a';
+        element = (char) (element - 'A' + 'a');
     }
     if (element >= 'a') {
         return element + 10 - 'a';
@@ -14,11 +14,11 @@ int CharToNum(char element) {
     }
 }
 
-char NumToChar(int element) {
+char transferNumToChar(int element) {
     if (element >= 10) {
-        return element - 10 + 'A';
+        return (char) (element - 10 + 'A');
     } else {
-        return element + '0';
+        return (char) (element + '0');
     }
 
 }

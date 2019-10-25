@@ -3,6 +3,9 @@
 //
 #pragma once
 
-void Transfer(int b1, int b2, const char *numberX);
+void transferNumFromOneNumberSystemToAnother(int firstNumSystem, int secondNumSystem, const char *originalNumber);
+
+int getPowerOfNum(const char *numberX);
+
 
 

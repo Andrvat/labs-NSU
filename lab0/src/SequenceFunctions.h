@@ -3,17 +3,21 @@
 //
 #pragma once
 
+#define MAX_TCHARSEQUENCE_SIZE 50
+
 struct TCharSequence {
-    char Data[50];
-    int Count;
+    char data[MAX_TCHARSEQUENCE_SIZE];
+    int size;
 };
 
-int IsEmptySequence(const struct TCharSequence *sequence);
+int isEmptySequence(const struct TCharSequence *sequence);
 
-void AppendNumToSequence(struct TCharSequence *sequence, char symbol);
+void appendNumToSequence(struct TCharSequence *sequence, char symbol);
 
-void PrintSequence(const struct TCharSequence *sequence);
+void printSequence(const struct TCharSequence *sequence);
 
-void ReverseSequence(struct TCharSequence *sequence);
+void reverseSequence(struct TCharSequence *sequence);
 
-void MakeEmptySequence(struct TCharSequence *sequence);
+void makeEmptySequence(struct TCharSequence *sequence);
+
+void swapTwoChars(char *firstChar, char *secondChar);

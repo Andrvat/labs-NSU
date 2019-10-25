@@ -3,32 +3,35 @@
 //
 
 #include <string.h>
+
 #include "CharAndNumTransfer.h"
 #include "globalConsts.h"
 #include "CheckInput.h"
 
-int CheckBounds(int value, int min, int max) {
-    return (value >= min && value <= max);
+int checkNumSystemBounds(int value, int minSymbol, int maxSymbol) {
+    return (value >= minSymbol && value <= maxSymbol);
 }
 
-int CheckInput(int b1, int b2, const char *numberX) {
-    if (!(CheckBounds(b1, MIN_SN, MAX_SN) && CheckBounds(b2, MIN_SN, MAX_SN))) {
+int checkInputForCorrectData(const int firstNumSystem, const int secondNumSystem, const char *originalNumber) {
+    unsigned int originalNumberSize = strlen(originalNumber);
+    if (!(checkNumSystemBounds(firstNumSystem, MIN_NUMBER_SYSTEM, MAX_NUMBER_SYSTEM) &&
+          checkNumSystemBounds(secondNumSystem, MIN_NUMBER_SYSTEM, MAX_NUMBER_SYSTEM))) {
         return -1;
     }
-    if (numberX[0] == '.' || numberX[(int) strlen(numberX) - 1] == '.') {
+    if (originalNumber[0] == '.' || originalNumber[(int) originalNumberSize - 1] == '.') {
         return -1;
     }
-    for (unsigned int i = 0; i < strlen(numberX); ++i) {
-        if (!(CheckBounds(numberX[i], '0', '9') ||
-              CheckBounds(numberX[i], 'A', 'F') ||
-              CheckBounds(numberX[i], 'a', 'f') ||
-              numberX[i] == '.')) {
+    for (unsigned int idx = 0; idx < originalNumberSize; ++idx) {
+        if (!(checkNumSystemBounds(originalNumber[idx], '0', '9') ||
+              checkNumSystemBounds(originalNumber[idx], 'A', 'F') ||
+              checkNumSystemBounds(originalNumber[idx], 'a', 'f') ||
+              originalNumber[idx] == '.')) {
             return -1;
         }
-        if (numberX[i] == '.' && numberX[i - 1] == '.') {
+        if (originalNumber[idx] == '.' && originalNumber[idx - 1] == '.') {
             return -1;
         }
-        if (CharToNum(numberX[i]) >= b1) {
+        if (transferCharToNum(originalNumber[idx]) >= firstNumSystem) {
             return -1;
         }
     }

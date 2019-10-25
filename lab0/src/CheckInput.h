@@ -4,5 +4,7 @@
 
 #pragma once
 
-int CheckInput(int b1, int b2, const char *numberX);
+int checkInputForCorrectData(int firstNumSystem, int secondNumSystem, const char *originalNumber);
+
+int checkNumSystemBounds(int value, int minSymbol, int maxSymbol);
 

@@ -3,8 +3,8 @@
 
 #pragma once
 
-int CharToNum(char element);
+int transferCharToNum(char element);
 
-char NumToChar(int element);
+char transferNumToChar(int element);
 
 

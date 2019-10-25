@@ -1,22 +1,23 @@
 #include <stdio.h>
 #include <stdlib.h>
+
 #include "TransferSN.h"
 #include "CheckInput.h"
 #include "globalConsts.h"
 
 int main() {
-    int b1, b2;
-    char numberX[MAX_SIZE_NUMBER];
+    int firstNumSystem, secondNumSystem;
+    char originalNumber[MAX_SIZE_NUMBER];
     // fix bugs
-    if (scanf("%d%d", &b1, &b2)) {
+    if (scanf("%d%d", &firstNumSystem, &secondNumSystem)) {
     }
-    if (scanf("%13s", numberX)) {
+    if (scanf("%13s", originalNumber)) {
     }
 
-    if (CheckInput(b1, b2, numberX)) {
-        printf("bad input");
+    if (checkInputForCorrectData(firstNumSystem, secondNumSystem, originalNumber)) {
+        printf("%s", "bad input");
         return EXIT_SUCCESS;
     }
-    Transfer(b1, b2, numberX);
+    transferNumFromOneNumberSystemToAnother(firstNumSystem, secondNumSystem, originalNumber);
     return EXIT_SUCCESS;
 }

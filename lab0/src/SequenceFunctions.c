@@ -2,33 +2,37 @@
 // Created by Andrey Valitov on 28.09.2019.
 //
 
-#include "SequenceFunctions.h"
 #include <stdio.h>
 
-int IsEmptySequence(const struct TCharSequence *sequence) {
-    return sequence->Count == 0;
+#include "SequenceFunctions.h"
+
+int isEmptySequence(const struct TCharSequence *sequence) {
+    return sequence->size == 0;
 }
 
-
-void AppendNumToSequence(struct TCharSequence *sequence, char symbol) {
-    sequence->Data[sequence->Count] = symbol;
-    ++sequence->Count;
+void swapTwoChars(char *firstChar, char *secondChar) {
+    char copyOfFirstChar = *firstChar;
+    *firstChar = *secondChar;
+    *secondChar = copyOfFirstChar;
 }
 
-void PrintSequence(const struct TCharSequence *sequence) {
-    for (int j = 0; j < sequence->Count; ++j) {
-        printf("%c", sequence->Data[j]);
+void appendNumToSequence(struct TCharSequence *sequence, const char symbol) {
+    sequence->data[sequence->size] = symbol;
+    ++sequence->size;
+}
+
+void printSequence(const struct TCharSequence *sequence) {
+    for (unsigned int idx = 0; idx < sequence->size; ++idx) {
+        printf("%c", sequence->data[idx]);
     }
 }
 
-void ReverseSequence(struct TCharSequence *sequence) {
-    for (int idx = 0; idx < sequence->Count / 2; idx++) {
-        char copyElement = sequence->Data[sequence->Count - idx - 1];
-        sequence->Data[sequence->Count - idx - 1] = sequence->Data[idx];
-        sequence->Data[idx] = copyElement;
+void reverseSequence(struct TCharSequence *sequence) {
+    for (unsigned int idx = 0; idx < sequence->size / 2; idx++) {
+        swapTwoChars(&sequence->data[sequence->size - idx - 1], &sequence->data[idx]);
     }
 }
 
-void MakeEmptySequence(struct TCharSequence *sequence) {
-    sequence->Count = 0;
+void makeEmptySequence(struct TCharSequence *sequence) {
+    sequence->size = 0;
 }
