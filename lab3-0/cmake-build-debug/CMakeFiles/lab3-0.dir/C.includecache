@@ -1,0 +1,38 @@
+#IncludeRegexLine: ^[ 	]*[#%][ 	]*(include|import)[ 	]*[<"]([^">]+)([">])
+
+#IncludeRegexScan: ^.*$
+
+#IncludeRegexComplain: ^$
+
+#IncludeRegexTransform: 
+
+C:/template/lab3-0/src/ChangingOriginalArray.c
+ChangingOriginalArray.h
+C:/template/lab3-0/src/ChangingOriginalArray.h
+stdio.h
+-
+stdlib.h
+-
+
+C:/template/lab3-0/src/ChangingOriginalArray.h
+
+C:/template/lab3-0/src/QuickSort.c
+QuickSort.h
+C:/template/lab3-0/src/QuickSort.h
+ChangingOriginalArray.h
+C:/template/lab3-0/src/ChangingOriginalArray.h
+
+C:/template/lab3-0/src/QuickSort.h
+ChangingOriginalArray.h
+C:/template/lab3-0/src/ChangingOriginalArray.h
+
+C:/template/lab3-0/src/main.c
+stdlib.h
+-
+stdio.h
+-
+QuickSort.h
+C:/template/lab3-0/src/QuickSort.h
+ChangingOriginalArray.h
+C:/template/lab3-0/src/ChangingOriginalArray.h
+
