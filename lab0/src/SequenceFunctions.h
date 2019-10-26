@@ -12,6 +12,8 @@ struct TCharSequence {
 
 int isEmptySequence(const struct TCharSequence *sequence);
 
+void swapTwoChars(char *firstChar, char *secondChar);
+
 void appendNumToSequence(struct TCharSequence *sequence, char symbol);
 
 void printSequence(const struct TCharSequence *sequence);
@@ -19,5 +21,3 @@ void printSequence(const struct TCharSequence *sequence);
 void reverseSequence(struct TCharSequence *sequence);
 
 void makeEmptySequence(struct TCharSequence *sequence);
-
-void swapTwoChars(char *firstChar, char *secondChar);

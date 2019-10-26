@@ -8,13 +8,16 @@
 int main() {
     int firstNumSystem, secondNumSystem;
     char originalNumber[MAX_SIZE_NUMBER];
-    // fix bugs
-    if (scanf("%d%d", &firstNumSystem, &secondNumSystem)) {
+    if (!scanf("%d%d", &firstNumSystem, &secondNumSystem)) {
+        printInfoAboutIncorrectInput();
+        return EXIT_SUCCESS;
     }
-    if (scanf("%13s", originalNumber)) {
+    if (!scanf("%13s", originalNumber)) {
+        printInfoAboutIncorrectInput();
+        return EXIT_SUCCESS;
     }
 
-    if (checkInputForCorrectData(firstNumSystem, secondNumSystem, originalNumber)) {
+    if (!checkInputForCorrectData(firstNumSystem, secondNumSystem, originalNumber)) {
         printf("%s", "bad input");
         return EXIT_SUCCESS;
     }

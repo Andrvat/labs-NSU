@@ -11,6 +11,36 @@
 #include "SequenceFunctions.h"
 #include "globalConsts.h"
 
+void transferNumFromOneNumberSystemToAnother(int firstNumSystem, int secondNumSystem,
+                                             const char *originalNumber) {
+    unsigned int originalNumberSize = strlen(originalNumber);
+    int powerOfNum = getPowerOfNum(originalNumber, originalNumberSize);
+    long double originalNumberInDecimalSystem = getDecimalRepresentationOfNumber(originalNumberSize, originalNumber,
+                                                                                 &powerOfNum,
+                                                                                 firstNumSystem);
+    TUnsignedInt64 newNumberIntPart = (TUnsignedInt64) originalNumberInDecimalSystem;
+    long double newNumberFractionalPart = originalNumberInDecimalSystem - newNumberIntPart;
+    struct TCharSequence newNumberIntPartInSecondNumberSystem;
+    makeEmptySequence(&newNumberIntPartInSecondNumberSystem);
+    addInSequenceRepresentationOfNumberIntPartInSecondNumberSystem(&newNumberIntPartInSecondNumberSystem,
+                                                                   &newNumberIntPart,
+                                                                   secondNumSystem);
+    if (isEmptySequence(&newNumberIntPartInSecondNumberSystem)) {
+        appendNumToSequence(&newNumberIntPartInSecondNumberSystem, '0');
+    }
+    struct TCharSequence newNumberFractionalPartInSecondNumberSystem;
+    makeEmptySequence(&newNumberFractionalPartInSecondNumberSystem);
+    addInSequenceRepresentationOfNumberFractionalPartInSecondNumberSystem(&newNumberFractionalPart,
+                                                                          &newNumberFractionalPartInSecondNumberSystem,
+                                                                          secondNumSystem);
+    reverseSequence(&newNumberIntPartInSecondNumberSystem);
+    printSequence(&newNumberIntPartInSecondNumberSystem);
+    if (!isEmptySequence(&newNumberFractionalPartInSecondNumberSystem)) {
+        printf("%c", '.');
+        printSequence(&newNumberFractionalPartInSecondNumberSystem);
+    }
+}
+
 int getPowerOfNum(const char *originalNumber, const unsigned int originalNumberSize) {
     int powerOfNum = 0;
     while (powerOfNum < (int) originalNumberSize && originalNumber[powerOfNum] != '.') {
@@ -32,40 +62,30 @@ long double getDecimalRepresentationOfNumber(const unsigned int originalNumberSi
     return newNumber;
 }
 
-
-void transferNumFromOneNumberSystemToAnother(int firstNumSystem, int secondNumSystem,
-                                             const char *originalNumber) {
-    unsigned int originalNumberSize = strlen(originalNumber);
-    int powerOfNum = getPowerOfNum(originalNumber, originalNumberSize);
-    long double newNumber = getDecimalRepresentationOfNumber(originalNumberSize, originalNumber, &powerOfNum,
-                                                             firstNumSystem);
-    TUnsignedInt64 newNumberIntPart = (TUnsignedInt64) newNumber;
-    long double newNumberFractionalPart = newNumber - newNumberIntPart;
-    struct TCharSequence newNumberIntPartInBinarySystem;
-    makeEmptySequence(&newNumberIntPartInBinarySystem);
-    while (newNumberIntPart > 0) {
-        appendNumToSequence(&newNumberIntPartInBinarySystem, transferNumToChar(newNumberIntPart % secondNumSystem));
-        newNumberIntPart /= secondNumSystem;
-    }
-    if (isEmptySequence(&newNumberIntPartInBinarySystem)) {
-        appendNumToSequence(&newNumberIntPartInBinarySystem, '0');
-    }
-    struct TCharSequence newNumberFractionalPartInBinarySystem; // массив символов для хранения дробной части в secondNumSystem-й СС
-    makeEmptySequence(&newNumberFractionalPartInBinarySystem);
-    while (newNumberFractionalPart != 0 && newNumberFractionalPartInBinarySystem.size < MAX_PRECISION_AFTER_DOT) {
-        newNumberFractionalPart *= secondNumSystem;
-        if (newNumberFractionalPart >= 1) {
-            appendNumToSequence(&newNumberFractionalPartInBinarySystem,
-                                transferNumToChar((int) newNumberFractionalPart));
-            newNumberFractionalPart -= (int) newNumberFractionalPart;
-        } else {
-            appendNumToSequence(&newNumberFractionalPartInBinarySystem, '0');
-        }
-    }
-    reverseSequence(&newNumberIntPartInBinarySystem);
-    printSequence(&newNumberIntPartInBinarySystem);
-    if (!isEmptySequence(&newNumberFractionalPartInBinarySystem)) {
-        printf("%c", '.');
-        printSequence(&newNumberFractionalPartInBinarySystem);
+void addInSequenceRepresentationOfNumberIntPartInSecondNumberSystem(
+        struct TCharSequence *newNumberIntPartInSecondNumberSystem,
+        TUnsignedInt64 *newNumberIntPart, const int secondNumSystem) {
+    while (*newNumberIntPart > 0) {
+        appendNumToSequence(newNumberIntPartInSecondNumberSystem,
+                            transferNumToChar(*newNumberIntPart % secondNumSystem));
+        *newNumberIntPart = *newNumberIntPart / secondNumSystem;
     }
 }
+
+void addInSequenceRepresentationOfNumberFractionalPartInSecondNumberSystem(long double *newNumberFractionalPart,
+                                                                           struct TCharSequence *newNumberFractionalPartInSecondNumberSystem,
+                                                                           const int secondNumSystem) {
+    while (*newNumberFractionalPart != 0 &&
+           newNumberFractionalPartInSecondNumberSystem->size < MAX_PRECISION_AFTER_DOT) {
+        *newNumberFractionalPart = *newNumberFractionalPart * secondNumSystem;
+        if (*newNumberFractionalPart >= 1) {
+            appendNumToSequence(newNumberFractionalPartInSecondNumberSystem,
+                                transferNumToChar((int) *newNumberFractionalPart));
+            *newNumberFractionalPart = *newNumberFractionalPart - (int) *newNumberFractionalPart;
+        } else {
+            appendNumToSequence(newNumberFractionalPartInSecondNumberSystem, '0');
+        }
+    }
+}
+
+
