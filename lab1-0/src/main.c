@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <stdlib.h>
 
 #define MAX_ARRAY_SIZE 17
 #define ASCII_TABLE_SIZE 256
@@ -23,7 +24,7 @@ struct OriginPattern {
     unsigned int patternSize;
 };
 
-void enterOriginPattern(struct OriginPattern *originPattern, FILE *file) {
+static void enterOriginPattern(struct OriginPattern *originPattern, FILE *file) {
     unsigned char character = fgetc(file);
     originPattern->patternSize = 0;
     while (character != '\n') {
@@ -34,7 +35,7 @@ void enterOriginPattern(struct OriginPattern *originPattern, FILE *file) {
     originPattern->mainPattern[originPattern->patternSize + 1] = '\0';
 }
 
-void createShiftTable(struct ShiftTable *shiftTable, const struct OriginPattern *originPattern) {
+static void createShiftTable(struct ShiftTable *shiftTable, const struct OriginPattern *originPattern) {
     shiftTable->shiftTableSize = ASCII_TABLE_SIZE;
     for (unsigned int idx = 0; idx < shiftTable->shiftTableSize; ++idx) {
         shiftTable->shiftIntTable[idx] = originPattern->patternSize;
@@ -48,25 +49,26 @@ void createShiftTable(struct ShiftTable *shiftTable, const struct OriginPattern 
     }
 }
 
-void inputNextCharacters(struct BMSearching *bmSearching, FILE *file) {
+static void inputNextCharacters(struct BMSearching *bmSearching, FILE *file) {
     bmSearching->countOfNextInputCharacters = fread(bmSearching->bufferForStorageText, sizeof(unsigned char),
                                                     MAX_ARRAY_SIZE - 1, file);
     bmSearching->idxForNextInput = 0;
     bmSearching->bufferForStorageText[bmSearching->countOfNextInputCharacters] = '\0';
 }
 
-int checkForEmptyInput(struct BMSearching *bmSearching) {
+static int checkForEmptyInput(struct BMSearching *bmSearching) {
     return bmSearching->countOfNextInputCharacters != 0;
 }
 
-void inputFirstCharacters(struct BMSearching *bmSearching, const struct OriginPattern *originPattern, FILE *file) {
+static void
+inputFirstCharacters(struct BMSearching *bmSearching, const struct OriginPattern *originPattern, FILE *file) {
     bmSearching->countOfNextInputCharacters = fread(bmSearching->mainArrayForStorageText, sizeof(unsigned char),
                                                     originPattern->patternSize, file);
     bmSearching->idxForNextInput = originPattern->patternSize - 1;
 }
 
-void getNextCharactersForComparison(struct BMSearching *bmSearching, const unsigned int nextStepForInput,
-                                    const struct OriginPattern *originPattern, FILE *file) {
+static void getNextCharactersForComparison(struct BMSearching *bmSearching, const unsigned int nextStepForInput,
+                                           const struct OriginPattern *originPattern, FILE *file) {
     for (unsigned int idx = 0; idx < originPattern->patternSize - nextStepForInput; ++idx) {
         bmSearching->mainArrayForStorageText[idx] = bmSearching->mainArrayForStorageText[idx + nextStepForInput];
     }
@@ -87,13 +89,13 @@ void getNextCharactersForComparison(struct BMSearching *bmSearching, const unsig
     }
 }
 
-void makeInitialSetupOfBMSearching(struct BMSearching *bmSearching, const struct OriginPattern *originPattern) {
+static void makeInitialSetupOfBMSearching(struct BMSearching *bmSearching, const struct OriginPattern *originPattern) {
     bmSearching->currentIdxForComparison = originPattern->patternSize - 1;
     bmSearching->idxForNextInput = MAX_ARRAY_SIZE;
     bmSearching->controlForEndOfText = 1;
 }
 
-void boyerMooreAlgorithm(const struct OriginPattern *originPattern, FILE *file) {
+static void boyerMooreAlgorithm(const struct OriginPattern *originPattern, FILE *file) {
     struct BMSearching bmSearching;
     struct ShiftTable shiftTable;
     createShiftTable(&shiftTable, originPattern);
@@ -131,4 +133,5 @@ int main() {
     enterOriginPattern(&originalPattern, file);
     boyerMooreAlgorithm(&originalPattern, file);
     fclose(file);
+    return EXIT_SUCCESS;
 }
