@@ -6,4 +6,3 @@ set(SRC src/main.c)
 add_executable(${PROJECT_NAME} ${SRC})
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/../modules")
-include(common_lab)
