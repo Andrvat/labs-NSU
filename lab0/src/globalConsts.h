@@ -1,6 +1,3 @@
-//
-// Created by Andrey Valitov on 19.09.2019.
-//
 #pragma once
 
 #define MAX_SIZE_NUMBER 14

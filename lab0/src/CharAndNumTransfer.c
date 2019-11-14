@@ -1,6 +1,3 @@
-//
-// Created by Andrey Valitov on 19.09.2019.
-//
 #include "CharAndNumTransfer.h"
 
 int transferCharToNum(char character) {

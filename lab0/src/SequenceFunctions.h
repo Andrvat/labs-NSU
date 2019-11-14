@@ -1,6 +1,3 @@
-//
-// Created by Andrey Valitov on 28.09.2019.
-//
 #pragma once
 
 #define MAX_TCHARSEQUENCE_SIZE 50

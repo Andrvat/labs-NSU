@@ -90,20 +90,20 @@ static void inputNextBuffer(struct RKSearching *rkSearching, FILE *fileForInputD
 static void calculateHashValue(struct RKSearching *rkSearching, unsigned int patternSize) {
     rkSearching->currentHashValue = 0;
     unsigned int multiplicationOfHashNum = 1;
-    unsigned int maximumOfHashInPower = (unsigned int) pow(HASH_NUM, patternSize - 1);
-    unsigned int currentIdxForCalcNewValue = rkSearching->ringArray.firstIdx;
+    unsigned int maxOfHashInPower = (unsigned int) pow(HASH_NUM, patternSize - 1);
+    unsigned int currentIdxForCalcValue = rkSearching->ringArray.firstIdx;
     while (TRUE) {
-        if (currentIdxForCalcNewValue > END_OF_RING_ARRAY) {
-            currentIdxForCalcNewValue = 0;
+        if (currentIdxForCalcValue > END_OF_RING_ARRAY) {
+            currentIdxForCalcValue = 0;
         }
-        if (multiplicationOfHashNum > maximumOfHashInPower) {
+        if (multiplicationOfHashNum > maxOfHashInPower) {
             break;
         }
         rkSearching->currentHashValue +=
-                ((unsigned int) rkSearching->ringArray.array[currentIdxForCalcNewValue] % HASH_NUM) *
+                ((unsigned int) rkSearching->ringArray.array[currentIdxForCalcValue] % HASH_NUM) *
                 multiplicationOfHashNum;
         multiplicationOfHashNum *= HASH_NUM;
-        currentIdxForCalcNewValue++;
+        currentIdxForCalcValue++;
     }
 }
 
@@ -378,7 +378,7 @@ int main(void) {
 }
 
 /**
- * @mainpage Лабораторная работа #2, НГУ, ФИТ, 1 курс
+ * @mainpage Лабораторная работа #1-1, НГУ, ФИТ, 1 курс
  * @author Андрей Валитов
  * @date 12.11.2019
  * @version 1.2

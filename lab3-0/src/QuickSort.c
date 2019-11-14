@@ -1,9 +1,20 @@
-//
-// Created by Andrey Valitov on 13.10.2019.
-//
-
 #include "QuickSort.h"
 #include "ChangingOriginalArray.h"
+
+/**
+ * @brief рекурсивный алгоритм быстрой сортировки
+ *
+ * За pivot берется серединный элемент
+ * Происходит перестановка элементов массива так,
+ * Чтобы справа от pivot остались элементы, большие его
+ * А слева - меньшие
+ * Далее, если есть, что сортировать, рекурсивно продолжаем сортировку,
+ * Пока массив не будет полностью отсортиован
+ *
+ * @param originalArray массив для сортировки
+ * @param beginOfSorting индекс, с которого начинааем сортировку
+ * @param endOfSorting индекс, каким заканчиваем сортировку
+ */
 
 void quickSort(struct ArrayOfNumbers *originalArray, int beginOfSorting, int endOfSorting) {
     int leftBorder = beginOfSorting;

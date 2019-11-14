@@ -1,7 +1,3 @@
-//
-// Created by Andrey Valitov on 28.09.2019.
-//
-
 #include <stdio.h>
 
 #include "SequenceFunctions.h"

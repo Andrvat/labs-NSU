@@ -1,13 +1,21 @@
-//
-// Created by Andrey Valitov on 19.09.2019.
-//
-
 #include <string.h>
 #include <stdio.h>
 
 #include "CharAndNumTransfer.h"
 #include "globalConsts.h"
 #include "CheckInput.h"
+
+/**
+ * @brief Проверка входной строки - является ли введенная последовательность числом в исходной СС
+ *
+ * Ф-я проверяет в введенной последовательности наличие посторонних символов, отличных от алфавита
+ * 0123456789ABCDEF, а также, меньше ли поразрядные значения основания исходной СС
+ *
+ * @param firstNumSystem
+ * @param secondNumSystem
+ * @param originalNumber
+ * @return 1, если проверка пройдена и 0, если введенная послед-ть не является числом
+ */
 
 int checkInputForCorrectData(const int firstNumSystem, const int secondNumSystem, const char *originalNumber) {
     unsigned int originalNumberSize = strlen(originalNumber);
@@ -35,7 +43,7 @@ int checkInputForCorrectData(const int firstNumSystem, const int secondNumSystem
     return 1;
 }
 
-int checkNumSystemForCorrectBounds(int currentValue, int minSymbol, int maxSymbol) {
+int checkNumSystemForCorrectBounds(const int currentValue, const int minSymbol, const int maxSymbol) {
     return (currentValue >= minSymbol && currentValue <= maxSymbol);
 }
 

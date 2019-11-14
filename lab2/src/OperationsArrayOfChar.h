@@ -15,7 +15,7 @@ void swapTwoCharacters(char *firstChar, char *secondChar);
 
 void inputCharSequence(struct TCharSequence *charSequence, int *isLengthAcceptable);
 
-        void printTCharSequence(const struct TCharSequence *charSequence);
+void printTCharSequence(const struct TCharSequence *charSequence);
 
 int checkInputForCorrectSequence(const struct TCharSequence *charSequence);
 

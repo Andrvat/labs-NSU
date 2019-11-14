@@ -1,9 +1,12 @@
-//
-// Created by Andrey Valitov on 23.10.2019.
-//
-
 #include "AlgorithmOfPermutation.h"
 #include "OperationsArrayOfChar.h"
+
+/**
+ * @brief Проверка возможности получения следующей перестановки
+ *
+ * @param charSequence
+ * @return true или false
+ */
 
 int getNextPermutation(struct TCharSequence *charSequence) {
     int haveNextPermutation = 1;
@@ -18,6 +21,13 @@ int getNextPermutation(struct TCharSequence *charSequence) {
     return 1;
 }
 
+/**
+ * @brief Главная функция, печатающая n след. перестановок
+ *
+ * @param charSequence - последовательность символов
+ * @param number - число необходимых перестановок
+ */
+
 void printMultiplePermutations(struct TCharSequence *charSequence, const unsigned int number) {
     unsigned int counterOfPermutations = 0;
     while (counterOfPermutations < number) {
@@ -29,6 +39,15 @@ void printMultiplePermutations(struct TCharSequence *charSequence, const unsigne
         ++counterOfPermutations;
     }
 }
+
+/**
+ * @brief Получение следующего индекса для перестановки
+ *
+ * @param charSequence
+ * @param haveNextPermutation
+ * @return true или false
+ * В зависимости от того, возможно ли получить следующий индекс
+ */
 
 int getFirstIdxForReplacement(const struct TCharSequence *charSequence, int *haveNextPermutation) {
     int idxForReplacement = (int) charSequence->size - 2;
@@ -43,13 +62,31 @@ int getFirstIdxForReplacement(const struct TCharSequence *charSequence, int *hav
     return idxForReplacement;
 }
 
+/**
+ * @brief Получение следующего индекса для перестановки
+ *
+ * @param charSequence
+ * @param haveNextPermutation
+ * @return true или false
+ * В зависимости от того, возможно ли получить следующий индекс
+ */
+
 unsigned int getSecondIdxForReplacement(const struct TCharSequence *charSequence, const int firstIdxForReplacement) {
-    unsigned int idxForReplacement = charSequence->size - 1;;
+    unsigned int idxForReplacement = charSequence->size - 1;
     while (charSequence->sequence[idxForReplacement] <= charSequence->sequence[firstIdxForReplacement]) {
         idxForReplacement--;
     }
     return idxForReplacement;
 }
+
+/**
+ * @brief Переворот части последовательности
+ *
+ * Ф-я переворачвает элементы последовательности от idxReverseFrom до charSequence.size
+ *
+ * @param charSequence
+ * @param idxReverseFrom - индекс старта переворота
+ */
 
 void reverseSequenceFromIdxToEnd(struct TCharSequence *charSequence, const int idxReverseFrom) {
     for (unsigned int idx = idxReverseFrom; idx < charSequence->size - 1; ++idx) {

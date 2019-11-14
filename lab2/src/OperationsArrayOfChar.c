@@ -1,10 +1,4 @@
-//
-// Created by Andrey Valitov on 23.10.2019.
-//
-
-#include <string.h>
 #include <stdio.h>
-#include <stdlib.h>
 
 #include "OperationsArrayOfChar.h"
 
@@ -13,6 +7,14 @@ void swapTwoCharacters(char *firstChar, char *secondChar) {
     *firstChar = *secondChar;
     *secondChar = copyOfFirstChar;
 }
+
+/**
+ * @brief ввод начальной последовательности
+ *
+ * @param charSequence
+ * @param isLengthAcceptable параметр, проверяющий длину входной последовательности
+ * Если он больше допустимой, до изменяем его, нет - программа продолжается
+ */
 
 void inputCharSequence(struct TCharSequence *charSequence, int *isLengthAcceptable) {
     char currentCharacter = (char) getchar();
@@ -28,6 +30,13 @@ void inputCharSequence(struct TCharSequence *charSequence, int *isLengthAcceptab
     }
     *isLengthAcceptable = 1;
 }
+
+/**
+ * @brief Проверка входной последовательности на наличие посторонних символов
+ *
+ * @param charSequence
+ * @return true или false
+ */
 
 int checkInputForCorrectSequence(const struct TCharSequence *charSequence) {
     int isElementInSequenceOnlyOne = (charSequence->size == 1);

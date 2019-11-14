@@ -24,3 +24,15 @@ int main() {
     transferNumFromOneNumberSystemToAnother(firstNumSystem, secondNumSystem, originalNumber);
     return EXIT_SUCCESS;
 }
+
+/**
+ * @mainpage Лабораторная работа #0, НГУ, ФИТ, 1 курс
+ * @author Андрей Валитов
+ * @date 19.09.2019
+ * @version 1.6
+ *
+ * @brief Перевод числа из одной системы счисления в другую
+ *
+ * @attention Удален include(common_lab) из файла CMakeLists.txt. Для лаб необходимо его вернуть в конец файла.
+ *
+ */

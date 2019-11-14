@@ -1,7 +1,3 @@
-//
-// Created by Andrey Valitov on 13.10.2019.
-//
-
 #include <stdio.h>
 #include <stdlib.h>
 #include "ChangingOriginalArray.h"
@@ -18,6 +14,13 @@ void printArrayOfNumbers(struct ArrayOfNumbers *originalArray) {
     }
 }
 
+/**
+ * @brief Ввод неотсортированного массива
+ *
+ * @return структруа ArrayOfNumbers
+ * (см. реализацию в *.h)
+ */
+
 struct ArrayOfNumbers inputArrayOfNumbers(void) {
     struct ArrayOfNumbers originalArray;
     if (!scanf("%d", &originalArray.size)) {
@@ -31,6 +34,12 @@ struct ArrayOfNumbers inputArrayOfNumbers(void) {
     }
     return originalArray;
 }
+
+/**
+ * @brief Освобождение памяти, выделенное под массив
+ *
+ * @param originalArray
+ */
 
 void freeArrayMemory(struct ArrayOfNumbers *originalArray) {
     free(originalArray->data);

@@ -1,7 +1,3 @@
-//
-// Created by Andrey Valitov on 19.09.2019.
-//
-
 #include <math.h>
 #include <string.h>
 #include <stdio.h>
@@ -11,7 +7,21 @@
 #include "SequenceFunctions.h"
 #include "globalConsts.h"
 
-void transferNumFromOneNumberSystemToAnother(int firstNumSystem, int secondNumSystem,
+/**
+ * @brief Главная функция перевода числа из одной СС в другую
+ *
+ * Перевод осуществляется через десятичную СС
+ * Перевод разделяется на два этапа:
+ * Этап 1: перевод целой части
+ * Этап 2: перевод дробной части
+ * См. названия переменных и функций - они делают ровно то, что должны по названию
+ *
+ * @param firstNumSystem
+ * @param secondNumSystem
+ * @param originalNumber введенное число
+ */
+
+void transferNumFromOneNumberSystemToAnother(const int firstNumSystem, const int secondNumSystem,
                                              const char *originalNumber) {
     unsigned int originalNumberSize = strlen(originalNumber);
     int powerOfNum = getPowerOfNum(originalNumber, originalNumberSize);
@@ -41,6 +51,14 @@ void transferNumFromOneNumberSystemToAnother(int firstNumSystem, int secondNumSy
     }
 }
 
+/**
+ * @brief Подсчет степени
+ *
+ * @param originalNumber
+ * @param originalNumberSize
+ * @return степень десятки самого старшего разряда
+ */
+
 int getPowerOfNum(const char *originalNumber, const unsigned int originalNumberSize) {
     int powerOfNum = 0;
     while (powerOfNum < (int) originalNumberSize && originalNumber[powerOfNum] != '.') {
@@ -48,6 +66,16 @@ int getPowerOfNum(const char *originalNumber, const unsigned int originalNumberS
     }
     return powerOfNum - 1;
 }
+
+/**
+ * @brief Перевод числа в 10-ю СС
+ *
+ * @param originalNumberSize
+ * @param originalNumber
+ * @param powerOfNum
+ * @param firstNumSystem
+ * @return введенное число в десятичной СС
+ */
 
 long double getDecimalRepresentationOfNumber(const unsigned int originalNumberSize, const char *originalNumber,
                                              int *powerOfNum, int firstNumSystem) {
@@ -62,6 +90,14 @@ long double getDecimalRepresentationOfNumber(const unsigned int originalNumberSi
     return newNumber;
 }
 
+/**
+ * @brief Добавление в последовательность вывода целой части исходного числа в той СС, в которую осуществляется перевод
+ *
+ * @param newNumberIntPartInSecondNumberSystem
+ * @param newNumberIntPart
+ * @param secondNumSystem
+ */
+
 void addInSequenceRepresentationOfNumberIntPartInSecondNumberSystem(
         struct TCharSequence *newNumberIntPartInSecondNumberSystem,
         TUnsignedInt64 *newNumberIntPart, const int secondNumSystem) {
@@ -71,6 +107,14 @@ void addInSequenceRepresentationOfNumberIntPartInSecondNumberSystem(
         *newNumberIntPart = *newNumberIntPart / secondNumSystem;
     }
 }
+
+/**
+ * @brief Добавление в последовательность вывода дробной части исходного числа в той СС, в которую осуществляется перевод
+ *
+ * @param newNumberFractionalPart
+ * @param newNumberFractionalPartInSecondNumberSystem
+ * @param secondNumSystem
+ */
 
 void addInSequenceRepresentationOfNumberFractionalPartInSecondNumberSystem(long double *newNumberFractionalPart,
                                                                            struct TCharSequence *newNumberFractionalPartInSecondNumberSystem,
