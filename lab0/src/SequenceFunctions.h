@@ -1,9 +1,9 @@
 #pragma once
 
-#define MAX_TCHARSEQUENCE_SIZE 50
+#define MAX_T_CHAR_SEQUENCE_SIZE 50
 
 struct TCharSequence {
-    char data[MAX_TCHARSEQUENCE_SIZE];
+    char data[MAX_T_CHAR_SEQUENCE_SIZE];
     int size;
 };
 
