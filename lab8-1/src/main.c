@@ -5,7 +5,8 @@
 #include <limits.h>
 
 #define MAX_VERTEX_NUM 5000
-
+#define INFINITY 4294967295
+typedef unsigned int unsInt;
 
 typedef enum checkData {
     success,
@@ -20,23 +21,28 @@ typedef enum checkData {
 
 typedef struct adjacencyMatrix {
     size_t size;
-    short **data;
+    unsInt **data;
 } TMatrix;
 
-typedef struct intPair {
-    short first;
-    short second;
-} TPair;
+typedef struct edge {
+    unsInt begin;
+    unsInt end;
+} TEdge;
+
+typedef struct distanceToAdjacentVertex {
+    unsInt vertexNum;
+    unsInt minPathToCurVertex;
+} TDistToVertex;
 
 
 TMatrix *initMatrix(const int userSize) {
     TMatrix *matrix = malloc(sizeof(TMatrix));
     matrix->size = userSize;
-    matrix->data = malloc(userSize * sizeof(short *));
+    matrix->data = malloc(userSize * sizeof(unsInt *));
     for (size_t i = 0; i < matrix->size; i++) {
-        matrix->data[i] = malloc(sizeof(short) * userSize);
+        matrix->data[i] = malloc(sizeof(unsInt) * userSize);
         for (size_t j = 0; j < matrix->size; j++) {
-            matrix->data[i][j] = SHRT_MAX;
+            matrix->data[i][j] = INFINITY;
         }
     }
     return matrix;
@@ -98,72 +104,69 @@ TMatrix *inputEdges(const int numberOfVertices, const int numberOfEdges,
             checkForCorrectData = badVertex;
             continue;
         }
-        if (currentWeight == INT_MAX) {
-            currentWeight = SHRT_MAX - 1;
-        }
         // индекс = номер вершины - 1
         begin--;
         end--;
-        matrix->data[begin][end] = (short) currentWeight;
-        matrix->data[end][begin] = (short) currentWeight;
+        matrix->data[begin][end] = (unsInt) currentWeight;
+        matrix->data[end][begin] = (unsInt) currentWeight;
     }
     *controlValueOfInputVertexes = checkForCorrectData;
 
     return matrix;
 }
 
-TPair *initMinDistList(const int numOfVertices) {
-    TPair *minDist = malloc(sizeof(TPair) * numOfVertices);
+TDistToVertex *initMinDistArray(const int numOfVertices) {
+    TDistToVertex *minDist = malloc(sizeof(TDistToVertex) * numOfVertices);
     for (int i = 0; i < numOfVertices; i++) {
-        minDist[i].first = SHRT_MAX;
-        minDist[i].second = SHRT_MAX;
+        minDist[i].vertexNum = INFINITY;
+        minDist[i].minPathToCurVertex = INFINITY;
     }
     return minDist;
 }
 
-TPair *findMinimumSpanningTree(const int numberOfEdges, const int numberOfVertices,
+TEdge *findMinimumSpanningTree(const int numberOfEdges, const unsInt numberOfVertices,
                                workingResult *status, TMatrix *matrix) {
     if (numberOfVertices == 0 || (numberOfEdges == 0 && numberOfVertices != 1)) {
         *status = noSpanningTree;
         return NULL;
     }
-    TPair *listOfEdges = malloc(sizeof(TPair) * (numberOfVertices - 1));
-    bool *visitingList = malloc(sizeof(bool) * numberOfVertices);
-    memset(visitingList, false, sizeof(bool) * numberOfVertices);
-    TPair *minDist = initMinDistList(numberOfVertices);
-    short movingStartVertex = 0;
-    short countOfVisitedVertices = 0;
+    TEdge *listOfEdges = malloc(sizeof(TEdge) * (numberOfVertices - 1));
+    bool *isVisited = malloc(sizeof(bool) * numberOfVertices);
+    memset(isVisited, false, sizeof(bool) * numberOfVertices);
+    TDistToVertex *minDists = initMinDistArray(numberOfVertices);
+    unsInt movingStartVertex = 0;
+    unsInt countOfVisitedVertices = 0;
     for (size_t strIdx = 0; strIdx < matrix->size; strIdx++) {
-        short idxOfMinValueInDistList = 0;
+        unsInt idxOfMinValueInDistArray = 0;
         for (size_t columnIdx = 0; columnIdx < matrix->size; columnIdx++) {
-            if (matrix->data[movingStartVertex][columnIdx] < minDist[columnIdx].second && !visitingList[columnIdx]) {
-                minDist[columnIdx].first = movingStartVertex;
-                minDist[columnIdx].second = matrix->data[movingStartVertex][columnIdx];
+            if (matrix->data[movingStartVertex][columnIdx] < minDists[columnIdx].minPathToCurVertex && !isVisited[columnIdx]) {
+                minDists[columnIdx].vertexNum = movingStartVertex;
+                minDists[columnIdx].minPathToCurVertex = matrix->data[movingStartVertex][columnIdx];
             }
-            if (minDist[columnIdx].second < minDist[idxOfMinValueInDistList].second) {
-                idxOfMinValueInDistList = columnIdx;
+            if (minDists[columnIdx].minPathToCurVertex < minDists[idxOfMinValueInDistArray].minPathToCurVertex) {
+                idxOfMinValueInDistArray = columnIdx;
             }
         }
-        if (visitingList[movingStartVertex] == false) {
+        if (isVisited[movingStartVertex] == false) {
             countOfVisitedVertices++;
         }
-        visitingList[movingStartVertex] = true;
+        isVisited[movingStartVertex] = true;
         if (countOfVisitedVertices == numberOfVertices) {
             break;
         }
-        if (!visitingList[idxOfMinValueInDistList]) {
-            listOfEdges[strIdx].first = (short) (minDist[idxOfMinValueInDistList].first + 1);
-            listOfEdges[strIdx].second = (short) (idxOfMinValueInDistList + 1);
+        if (!isVisited[idxOfMinValueInDistArray]) {
+            listOfEdges[strIdx].begin = (unsInt) (minDists[idxOfMinValueInDistArray].vertexNum + 1);
+            listOfEdges[strIdx].end = (unsInt) (idxOfMinValueInDistArray + 1);
         }
-        minDist[idxOfMinValueInDistList].first = SHRT_MAX;
-        minDist[idxOfMinValueInDistList].second = SHRT_MAX;
-        movingStartVertex = idxOfMinValueInDistList;
+        minDists[idxOfMinValueInDistArray].vertexNum = INFINITY;
+        minDists[idxOfMinValueInDistArray].minPathToCurVertex = INFINITY;
+        movingStartVertex = idxOfMinValueInDistArray;
     }
     if (countOfVisitedVertices != numberOfVertices) {
         *status = noSpanningTree;
     }
-    free(visitingList);
-    free(minDist);
+    free(isVisited);
+    free(minDists);
     return listOfEdges;
 }
 
@@ -195,9 +198,9 @@ void printMessageByStatus(const workingResult status) {
     }
 }
 
-void printSpanningTree(const int numberOfVertices, TPair *listOfEdges) {
+void printSpanningTree(const int numberOfVertices, TEdge *listOfEdges) {
     for (int i = 0; i < numberOfVertices - 1; i++) {
-        printf("%d %d\n", listOfEdges[i].first, listOfEdges[i].second);
+        printf("%u %u\n", listOfEdges[i].begin, listOfEdges[i].end);
     }
 }
 
@@ -213,7 +216,7 @@ int main(void) {
         status = badNumOfEdges;
     }
     TMatrix *matrix = NULL;
-    TPair *listOfEdges = NULL;
+    TEdge *listOfEdges = NULL;
     if (status == success) {
         matrix = inputEdges(numberOfVertices, numberOfEdges, &status);
     }
