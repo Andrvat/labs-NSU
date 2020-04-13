@@ -6,7 +6,6 @@
 
 #define MAX_VERTEX_NUM 5000
 #define INFINITY 4294967295
-typedef unsigned int unsInt;
 
 typedef enum checkData {
     success,
@@ -21,26 +20,26 @@ typedef enum checkData {
 
 typedef struct adjacencyMatrix {
     size_t size;
-    unsInt **data;
+    unsigned int **data;
 } TMatrix;
 
 typedef struct edge {
-    unsInt begin;
-    unsInt end;
+    unsigned int begin;
+    unsigned int end;
 } TEdge;
 
 typedef struct distanceToAdjacentVertex {
-    unsInt vertexNum;
-    unsInt minPathToCurVertex;
+    unsigned int vertexNum;
+    unsigned int minEdgeWeight;
 } TDistToVertex;
 
 
 TMatrix *initMatrix(const int userSize) {
     TMatrix *matrix = malloc(sizeof(TMatrix));
     matrix->size = userSize;
-    matrix->data = malloc(userSize * sizeof(unsInt *));
+    matrix->data = malloc(userSize * sizeof(unsigned int *));
     for (size_t i = 0; i < matrix->size; i++) {
-        matrix->data[i] = malloc(sizeof(unsInt) * userSize);
+        matrix->data[i] = malloc(sizeof(unsigned int) * userSize);
         for (size_t j = 0; j < matrix->size; j++) {
             matrix->data[i][j] = INFINITY;
         }
@@ -107,24 +106,24 @@ TMatrix *inputEdges(const int numberOfVertices, const int numberOfEdges,
         // индекс = номер вершины - 1
         begin--;
         end--;
-        matrix->data[begin][end] = (unsInt) currentWeight;
-        matrix->data[end][begin] = (unsInt) currentWeight;
+        matrix->data[begin][end] = (unsigned int) currentWeight;
+        matrix->data[end][begin] = (unsigned int) currentWeight;
     }
     *controlValueOfInputVertexes = checkForCorrectData;
 
     return matrix;
 }
 
-TDistToVertex *initMinDistArray(const int numOfVertices) {
+TDistToVertex *initMinDistArray(const unsigned int numOfVertices) {
     TDistToVertex *minDist = malloc(sizeof(TDistToVertex) * numOfVertices);
-    for (int i = 0; i < numOfVertices; i++) {
+    for (unsigned int i = 0; i < numOfVertices; i++) {
         minDist[i].vertexNum = INFINITY;
-        minDist[i].minPathToCurVertex = INFINITY;
+        minDist[i].minEdgeWeight = INFINITY;
     }
     return minDist;
 }
 
-TEdge *findMinimumSpanningTree(const int numberOfEdges, const unsInt numberOfVertices,
+TEdge *findMinimumSpanningTree(const int numberOfEdges, const unsigned int numberOfVertices,
                                workingResult *status, TMatrix *matrix) {
     if (numberOfVertices == 0 || (numberOfEdges == 0 && numberOfVertices != 1)) {
         *status = noSpanningTree;
@@ -134,16 +133,16 @@ TEdge *findMinimumSpanningTree(const int numberOfEdges, const unsInt numberOfVer
     bool *isVisited = malloc(sizeof(bool) * numberOfVertices);
     memset(isVisited, false, sizeof(bool) * numberOfVertices);
     TDistToVertex *minDists = initMinDistArray(numberOfVertices);
-    unsInt movingStartVertex = 0;
-    unsInt countOfVisitedVertices = 0;
+    unsigned int movingStartVertex = 0;
+    unsigned int countOfVisitedVertices = 0;
     for (size_t strIdx = 0; strIdx < matrix->size; strIdx++) {
-        unsInt idxOfMinValueInDistArray = 0;
+        unsigned int idxOfMinValueInDistArray = 0;
         for (size_t columnIdx = 0; columnIdx < matrix->size; columnIdx++) {
-            if (matrix->data[movingStartVertex][columnIdx] < minDists[columnIdx].minPathToCurVertex && !isVisited[columnIdx]) {
+            if (matrix->data[movingStartVertex][columnIdx] < minDists[columnIdx].minEdgeWeight && !isVisited[columnIdx]) {
                 minDists[columnIdx].vertexNum = movingStartVertex;
-                minDists[columnIdx].minPathToCurVertex = matrix->data[movingStartVertex][columnIdx];
+                minDists[columnIdx].minEdgeWeight = matrix->data[movingStartVertex][columnIdx];
             }
-            if (minDists[columnIdx].minPathToCurVertex < minDists[idxOfMinValueInDistArray].minPathToCurVertex) {
+            if (minDists[columnIdx].minEdgeWeight < minDists[idxOfMinValueInDistArray].minEdgeWeight) {
                 idxOfMinValueInDistArray = columnIdx;
             }
         }
@@ -155,11 +154,11 @@ TEdge *findMinimumSpanningTree(const int numberOfEdges, const unsInt numberOfVer
             break;
         }
         if (!isVisited[idxOfMinValueInDistArray]) {
-            listOfEdges[strIdx].begin = (unsInt) (minDists[idxOfMinValueInDistArray].vertexNum + 1);
-            listOfEdges[strIdx].end = (unsInt) (idxOfMinValueInDistArray + 1);
+            listOfEdges[strIdx].begin = (unsigned int) (minDists[idxOfMinValueInDistArray].vertexNum + 1);
+            listOfEdges[strIdx].end = (unsigned int) (idxOfMinValueInDistArray + 1);
         }
         minDists[idxOfMinValueInDistArray].vertexNum = INFINITY;
-        minDists[idxOfMinValueInDistArray].minPathToCurVertex = INFINITY;
+        minDists[idxOfMinValueInDistArray].minEdgeWeight = INFINITY;
         movingStartVertex = idxOfMinValueInDistArray;
     }
     if (countOfVisitedVertices != numberOfVertices) {
