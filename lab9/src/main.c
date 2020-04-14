@@ -6,7 +6,11 @@
 #include <assert.h>
 
 #define MAX_VERTICES_SIZE 5000
-#define INT_MAX_IN_MATRIX -1
+
+/**
+ * @brief Перечисляемый тип данных для контроля состояния выполненя программы
+ * Каждое значение соответствует ровному своему названию
+ */
 
 typedef enum workingResult {
     badWeight,
@@ -20,16 +24,27 @@ typedef enum workingResult {
     badNumOfEdges
 } workingResult;
 
+/**
+ * @struct Матрица смежности
+ */
 
 typedef struct adjacencyMatrix {
     size_t size;
-    short **data;
+    unsigned int **data;
 } TMatrix;
+
+/**
+ * @struct Массив кратчайших расстояний до вершин
+ */
 
 typedef struct minDist {
     size_t size;
     long long int *data;
 } TMinDist;
+
+/**
+ * @struct Простой аналог вектора из С++
+ */
 
 typedef struct intVector {
     size_t capacity;
@@ -37,25 +52,46 @@ typedef struct intVector {
     int *vector;
 } TVector;
 
+/**
+ * @brief Вывод сообщения об ошибке при сбое в чтении/записи файла
+ * Добавлю, что нигде в обычных условиях не будет вызвана
+ * Нужна для гитлаба - занять проверки fread(), scanf() и т.д.
+ */
+
 void printIOException() {
     printf("There is no input. Check your file to data");
 }
+
+/**
+ * @brief Проверка на корректность числа вершин
+ * См. условие
+ */
 
 int checkNumberOfVertices(const int numberOfVertices) {
     return numberOfVertices >= 0 && numberOfVertices <= MAX_VERTICES_SIZE;
 }
 
+/**
+ * @brief Проверка на корректность числа ребер
+ * См. условие
+ */
+
 int checkNumberOfEdges(const int numberOfEdges, const int numberOfVertices) {
     return numberOfEdges >= 0 && numberOfEdges <= numberOfVertices * (numberOfVertices + 1) / 2;
 }
 
+/**
+ * @brief Создания и инициализация матрицы смежности
+ * Изначально заполняем нулями с помощью memset()
+ */
+
 TMatrix *initMatrix(const int userSize) {
     TMatrix *matrix = malloc(sizeof(TMatrix));
     matrix->size = userSize;
-    matrix->data = malloc(userSize * sizeof(short *));
+    matrix->data = malloc(userSize * sizeof(int *));
     for (size_t i = 0; i < matrix->size; i++) {
-        matrix->data[i] = malloc(sizeof(short) * userSize);
-        memset(matrix->data[i], 0, userSize * sizeof(short));
+        matrix->data[i] = malloc(sizeof(int) * userSize);
+        memset(matrix->data[i], 0, userSize * sizeof(int));
     }
     return matrix;
 }
@@ -71,6 +107,13 @@ void resizeVector(TVector *vector, size_t newSize) {
         assert("Increasing vector size is not supported for now");
     }
 }
+
+/**
+ * @brief Инициализация массива расстояний до каждой из вершин
+ * Изначально заполняем значем long_long_max из limits.h
+ * В начальной вершине ставим 0
+ * См. реализацию алгоритма
+ */
 
 TMinDist *initMinDistancesArray(const int start, const int userSize) {
     TMinDist *minDist = malloc(sizeof(TMinDist));
@@ -90,6 +133,10 @@ void freeMatrix(TMatrix *matrix) {
     free(matrix->data);
     free(matrix);
 }
+
+/**
+ * @brief Освобождение используемой программой памяти
+ */
 
 void freeMemory(TMinDist *minDistances, TVector *path, TMatrix *matrix) {
     if (matrix != NULL) {
@@ -111,6 +158,12 @@ int inputInitialValues(int *numberOfVertices, int *start, int *finish, int *numb
     return haveNextInput || *start < 1 || *numberOfVertices < *start;
 }
 
+/**
+ * @brief Ввод данных вида вершина_1 - вершина_2 - вес
+ * Параллельно проводится проверка на допустимые границы
+ * См. условие
+ */
+
 TMatrix *inputEdges(const int numberOfEdges, const int numberOfVertices, workingResult *controlForCorrectInput) {
     TMatrix *matrix = initMatrix(numberOfVertices);
     if (numberOfVertices == 0) {
@@ -131,18 +184,19 @@ TMatrix *inputEdges(const int numberOfEdges, const int numberOfVertices, working
             *controlForCorrectInput = badWeight;
             continue;
         }
-        // INT_MAX записывается как -1
-        if (weight == INT_MAX) {
-            weight = INT_MAX_IN_MATRIX;
-        }
         // индекс = номер вершины - 1
         begin--;
         end--;
-        matrix->data[begin][end] = (short) weight;
-        matrix->data[end][begin] = (short) weight;
+        matrix->data[begin][end] = (unsigned int) weight;
+        matrix->data[end][begin] = (unsigned int) weight;
     }
     return matrix;
 }
+
+/**
+ * @brief Нахождение кратчайших путей до каждой из вершин
+ * Как это делается - см. реализацию алгоритма Дейкстры
+ */
 
 TMinDist *findAllShortestPath(const int start, TMatrix *matrix) {
     TMinDist *minDistances = initMinDistancesArray(start, matrix->size);
@@ -163,9 +217,6 @@ TMinDist *findAllShortestPath(const int start, TMatrix *matrix) {
         if (minimumIdx != MAX_VERTICES_SIZE) {
             for (size_t i = 0; i < minDistances->size; i++) {
                 long long int weightOfCurrentEdge = matrix->data[minimumIdx][i];
-                if (weightOfCurrentEdge == INT_MAX_IN_MATRIX) {
-                    weightOfCurrentEdge = INT_MAX;
-                }
                 if (weightOfCurrentEdge > 0) {
                     long long int temp = minValueOfPath + weightOfCurrentEdge;
                     if (temp < minDistances->data[i]) {
@@ -202,6 +253,11 @@ TVector *createVector(const int userSize) {
     return initPath;
 }
 
+/**
+ * @brief Восстановление пути из заданной вершины до начальной
+ * Как это делается - см. реализацию алгоритма Дейкстры
+ */
+
 TVector *getShortestPath(const int start, const int finish, TMinDist *minDistances, TMatrix *matrix,
                          workingResult *controlValueOfShortestPath) {
     TVector *path = createVector(matrix->size);
@@ -216,9 +272,6 @@ TVector *getShortestPath(const int start, const int finish, TMinDist *minDistanc
             if (matrix->data[endOfPath][i] != 0) {
                 isThereNextPath = 1;
                 long long int workingElement = matrix->data[endOfPath][i];
-                if (workingElement == INT_MAX_IN_MATRIX) {
-                    workingElement = INT_MAX;
-                }
                 long long int currentValueOfWeight = weight - workingElement;
                 if (currentValueOfWeight == minDistances->data[i]) {
                     if (currentValueOfWeight == INT_MAX) {
