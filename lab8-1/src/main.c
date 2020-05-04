@@ -23,16 +23,10 @@ typedef struct adjacencyMatrix {
     unsigned int **data;
 } TMatrix;
 
-typedef struct edge {
-    unsigned int begin;
-    unsigned int end;
-} TEdge;
-
 typedef struct distanceToAdjacentVertex {
     unsigned int vertexNum;
     unsigned int minEdgeWeight;
 } TDistToVertex;
-
 
 TMatrix *initMatrix(const int userSize) {
     TMatrix *matrix = malloc(sizeof(TMatrix));
@@ -123,50 +117,54 @@ TDistToVertex *initMinDistArray(const unsigned int numOfVertices) {
     return minDist;
 }
 
-TEdge *findMinimumSpanningTree(const int numberOfEdges, const unsigned int numberOfVertices,
-                               workingResult *status, TMatrix *matrix) {
-    if (numberOfVertices == 0 || (numberOfEdges == 0 && numberOfVertices != 1)) {
-        *status = noSpanningTree;
-        return NULL;
+unsigned int getNextVertexWithMinEdgeWeight(const size_t matrixSize, const bool *isVisited,
+                                            const TDistToVertex *minDists, bool *isThereNextEdge) {
+    unsigned int nextVertexWithMinEdgeWeight = 0;
+    for (size_t columnIdx = 0; columnIdx < matrixSize; columnIdx++) {
+        if (minDists[columnIdx].minEdgeWeight < minDists[nextVertexWithMinEdgeWeight].minEdgeWeight &&
+            !isVisited[columnIdx]) {
+            *isThereNextEdge = true;
+            nextVertexWithMinEdgeWeight = columnIdx;
+        }
     }
-    TEdge *listOfEdges = malloc(sizeof(TEdge) * (numberOfVertices - 1));
+    return nextVertexWithMinEdgeWeight;
+}
+
+void updateMinDestinationsToUnvisitedVertices(const TMatrix *matrix, const unsigned int newMSTVertex,
+                                              const bool *isVisited, TDistToVertex *minDists) {
+    for (size_t columnIdx = 0; columnIdx < matrix->size; columnIdx++) {
+        if (matrix->data[newMSTVertex][columnIdx] < minDists[columnIdx].minEdgeWeight && !isVisited[columnIdx]) {
+            minDists[columnIdx].vertexNum = newMSTVertex;
+            minDists[columnIdx].minEdgeWeight = matrix->data[newMSTVertex][columnIdx];
+        }
+    }
+}
+
+TDistToVertex *findMinimumSpanningTree(const unsigned int numberOfVertices, workingResult *status, TMatrix *matrix) {
     bool *isVisited = malloc(sizeof(bool) * numberOfVertices);
     memset(isVisited, false, sizeof(bool) * numberOfVertices);
     TDistToVertex *minDists = initMinDistArray(numberOfVertices);
-    unsigned int movingStartVertex = 0;
-    unsigned int countOfVisitedVertices = 0;
-    for (size_t strIdx = 0; strIdx < matrix->size; strIdx++) {
-        unsigned int idxOfMinValueInDistArray = 0;
-        for (size_t columnIdx = 0; columnIdx < matrix->size; columnIdx++) {
-            if (matrix->data[movingStartVertex][columnIdx] < minDists[columnIdx].minEdgeWeight && !isVisited[columnIdx]) {
-                minDists[columnIdx].vertexNum = movingStartVertex;
-                minDists[columnIdx].minEdgeWeight = matrix->data[movingStartVertex][columnIdx];
-            }
-            if (minDists[columnIdx].minEdgeWeight < minDists[idxOfMinValueInDistArray].minEdgeWeight) {
-                idxOfMinValueInDistArray = columnIdx;
-            }
-        }
-        if (isVisited[movingStartVertex] == false) {
-            countOfVisitedVertices++;
-        }
-        isVisited[movingStartVertex] = true;
-        if (countOfVisitedVertices == numberOfVertices) {
+    unsigned int newVertexInMSTree = 0;
+    // Начинаем с дерева из одной вершины.
+    isVisited[0] = true;
+    updateMinDestinationsToUnvisitedVertices(matrix, newVertexInMSTree, isVisited, minDists);
+    bool isThereNextEdge = false;
+    unsigned int nextVertexWithMinEdgeWeight = getNextVertexWithMinEdgeWeight(matrix->size, isVisited, minDists,
+                                                                              &isThereNextEdge);
+    for (size_t strIdx = 0; strIdx < matrix->size - 1; strIdx++) {
+        if (!isThereNextEdge) {
+            *status = noSpanningTree;
             break;
         }
-        if (!isVisited[idxOfMinValueInDistArray]) {
-            listOfEdges[strIdx].begin = (unsigned int) (minDists[idxOfMinValueInDistArray].vertexNum + 1);
-            listOfEdges[strIdx].end = (unsigned int) (idxOfMinValueInDistArray + 1);
-        }
-        minDists[idxOfMinValueInDistArray].vertexNum = INFINITY;
-        minDists[idxOfMinValueInDistArray].minEdgeWeight = INFINITY;
-        movingStartVertex = idxOfMinValueInDistArray;
-    }
-    if (countOfVisitedVertices != numberOfVertices) {
-        *status = noSpanningTree;
+        isVisited[nextVertexWithMinEdgeWeight] = true;
+        newVertexInMSTree = nextVertexWithMinEdgeWeight;
+        updateMinDestinationsToUnvisitedVertices(matrix, newVertexInMSTree, isVisited, minDists);
+        isThereNextEdge = false;
+        nextVertexWithMinEdgeWeight = getNextVertexWithMinEdgeWeight(matrix->size, isVisited, minDists,
+                                                                     &isThereNextEdge);
     }
     free(isVisited);
-    free(minDists);
-    return listOfEdges;
+    return minDists;
 }
 
 void printMessageByStatus(const workingResult status) {
@@ -197,9 +195,11 @@ void printMessageByStatus(const workingResult status) {
     }
 }
 
-void printSpanningTree(const int numberOfVertices, TEdge *listOfEdges) {
-    for (int i = 0; i < numberOfVertices - 1; i++) {
-        printf("%u %u\n", listOfEdges[i].begin, listOfEdges[i].end);
+void printMinimumSpanningTree(const int numberOfVertices, TDistToVertex *minDists) {
+    for (int i = 0; i < numberOfVertices; i++) {
+        if (minDists[i].minEdgeWeight != INFINITY) {
+            printf("%d %u\n", i + 1, minDists[i].vertexNum + 1);
+        }
     }
 }
 
@@ -215,24 +215,28 @@ int main(void) {
         status = badNumOfEdges;
     }
     TMatrix *matrix = NULL;
-    TEdge *listOfEdges = NULL;
+    TDistToVertex *minDists = NULL;
     if (status == success) {
         matrix = inputEdges(numberOfVertices, numberOfEdges, &status);
     }
     if (status == success) {
-        listOfEdges = findMinimumSpanningTree(numberOfEdges, numberOfVertices, &status, matrix);
+        if (numberOfVertices == 0 || (numberOfEdges == 0 && numberOfVertices != 1)) {
+            status = noSpanningTree;
+        }
     }
     if (status == success) {
-        printSpanningTree(numberOfVertices, listOfEdges);
+        minDists = findMinimumSpanningTree(numberOfVertices, &status, matrix);
+    }
+    if (status == success) {
+        printMinimumSpanningTree(numberOfVertices, minDists);
     } else {
         printMessageByStatus(status);
     }
     if (matrix != NULL) {
         freeMatrix(matrix);
     }
-    if (listOfEdges != NULL) {
-        free(listOfEdges);
+    if (minDists != NULL) {
+        free(minDists);
     }
     return EXIT_SUCCESS;
 }
-
