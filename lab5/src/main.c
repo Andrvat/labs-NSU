@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <stdbool.h>
 #include <limits.h>
+#include <string.h>
 
 #define MAX_CHAR_NUM 256
 #define ZIP_TEXT 'c'
@@ -10,595 +11,483 @@
 #define BYTE_LENGTH 8
 #define FILE_EMPTY -1
 
-typedef unsigned char unChar;
+typedef unsigned char ui8;
 
-unChar dynamicSymbolsBinaryCode[256];
-
-typedef struct unsignedCharBuffer {
-    unChar data[BUFFER_SIZE];
-    short movingIdx; // <= BUFFER_SIZE
-} TUnCharBuffer;
-
-typedef struct huffmanDecodingTree {
-    struct huffmanDecodingTree *leftSubtree;
-    struct huffmanDecodingTree *rightSubtree;
-    unChar characterCode;
-    unChar characterValue; // <= MAX_CHAR_NUM
-    bool isLeaf;
-} THuffmanDecodingTree;
-
-
-typedef struct huffmanCodingTree {
-    struct huffmanCodingTree *leftSubtree;
-    struct huffmanCodingTree *rightSubtree;
-    unChar character;
-    int frequenciesSum;
-} THuffmanCodingTree;
+typedef struct huffmanTree {
+    struct huffmanTree *leftSubtree;
+    struct huffmanTree *rightSubtree;
+    ui8 character;
+    int encodingTreeFrequency;
+} THuffmanTree;
 
 typedef struct binaryCodesTable {
-    unChar *bits;
-    unChar character;
-    unChar bitsLen; // <= 8
+    ui8 *bits;
+    ui8 character;
+    ui8 bitsLen; // <= 8
 } TCodesTable;
 
-typedef struct fileHuffmanTreeSequence {
-    unChar sequenceContainer[MAX_CHAR_NUM * 3];
-    unsigned short sequenceCount;
-} TTreeSequence;
-
 typedef struct readWriteFileBits {
-    unChar bitsContainer[BYTE_LENGTH];
     FILE *outputStream;
     FILE *inputStream;
-    short bitsIdx;
+    ui8 bufferData[BUFFER_SIZE];
+    size_t bufferIdx; // <= BUFFER_SIZE
+    ui8 bitsContainer[BYTE_LENGTH];
+    size_t bitsIdx;
 } TRWFileBits;
 
-void printIOException() {
-    fprintf(stderr, "Check your file to have correct data! The file is empty\n");
+bool FileDoesntEnd(const size_t bufferIdx, const size_t currentBufferSize) {
+    return bufferIdx != currentBufferSize || currentBufferSize == BUFFER_SIZE;
 }
 
-bool fileDidntEnd(const short movingIdx, const short inputSize) {
-    return movingIdx != inputSize || inputSize == BUFFER_SIZE;
+bool IsBufferOverflow(const TRWFileBits *fileProcessing) {
+    return fileProcessing->bufferIdx == BUFFER_SIZE;
 }
 
-bool isBufferOverflow(TUnCharBuffer *buffer) {
-    return buffer->movingIdx == BUFFER_SIZE;
+void UpdateBuffer(size_t *inputSize, TRWFileBits *fileProcessing) {
+    *inputSize = fread(fileProcessing->bufferData, sizeof(ui8), BUFFER_SIZE, fileProcessing->inputStream);
+    fileProcessing->bufferIdx = 0;
 }
 
-void updateBuffer(TUnCharBuffer *buffer, short *inputSize, TRWFileBits *fileProcessing) {
-    if ((*inputSize = (short) fread(buffer->data, sizeof(unChar), BUFFER_SIZE, fileProcessing->inputStream)) < 0) {
-        printIOException();
-    }
-    buffer->movingIdx = 0;
-}
-
-int getElementByBinaryCode(const unChar *buffer) {
+int GetElementByItsBinaryCode(const ui8 *binCodeSequence) {
     int element = 0;
     for (int i = 0; i < BYTE_LENGTH; i++) {
-        element = (element << 1) | (buffer[i] - '0');
+        element = (element << 1) | binCodeSequence[i];
     }
     return element;
 }
 
-unChar *getElementsBinaryCode(unChar element) {
-    unChar *bitsCode = malloc(sizeof(unChar) * BYTE_LENGTH);
-    for (int j = 0; j < BYTE_LENGTH; j++) {
-        bitsCode[j] = '0';
-    }
-    short i = 0;
-    while (element != 0) {
-        bitsCode[BYTE_LENGTH - i - 1] = element % 2 + '0';
-        element = (element) >> 1;
-        i++;
-    }
-    return bitsCode;
+ui8 GetElementsBit(const ui8 element, const int bitIdx) {
+    return (bool) ((1 << bitIdx) & element);
 }
 
-int leavesComparator(const void *a, const void *b) {
-    return (((THuffmanCodingTree *) a)->frequenciesSum) - (((THuffmanCodingTree *) b)->frequenciesSum);
+int ComparatorForPriorityQueueElements(const void *a, const void *b) {
+    return (((THuffmanTree *) a)->encodingTreeFrequency) - (((THuffmanTree *) b)->encodingTreeFrequency);
 }
 
-bool isCountZero(const size_t count) {
-    return count == 0;
-}
-
-void initHuffmanCodingTreeLeaves(THuffmanCodingTree *tree) {
-    for (int i = 0; i < MAX_CHAR_NUM; i++) {
-        tree[i].character = (unChar) i;
-        tree[i].frequenciesSum = INT_MAX;
-        tree[i].leftSubtree = NULL;
-        tree[i].rightSubtree = NULL;
+void InitHuffmanPriorityQueue(const size_t initialSize, THuffmanTree *priorityQueue) {
+    for (size_t i = 0; i < initialSize; i++) {
+        priorityQueue[i].character = (ui8) i;
+        priorityQueue[i].encodingTreeFrequency = INT_MAX;
+        priorityQueue[i].leftSubtree = NULL;
+        priorityQueue[i].rightSubtree = NULL;
     }
 }
 
-bool isLeafYetNotVisited(THuffmanCodingTree leaf) {
-    return leaf.frequenciesSum == INT_MAX;
+bool IsLeafYetNotVisited(const THuffmanTree treeLeaf) {
+    return treeLeaf.encodingTreeFrequency == INT_MAX;
 }
 
-void fillLeafsData(size_t *leavesCount, TUnCharBuffer *buffer,
-                   THuffmanCodingTree *tree) {
-    unChar element = buffer->data[buffer->movingIdx];
-    buffer->movingIdx += 1;
-    if (isLeafYetNotVisited(tree[element])) {
-        tree[element].frequenciesSum = 0;
+void FillLeafsDataToPriorityQueue(size_t *leavesCount, TRWFileBits *fileProcessing,
+                                  THuffmanTree *priorityQueue) {
+    ui8 element = fileProcessing->bufferData[fileProcessing->bufferIdx];
+    fileProcessing->bufferIdx += 1;
+    if (IsLeafYetNotVisited(priorityQueue[element])) {
+        priorityQueue[element].encodingTreeFrequency = 0;
         *leavesCount += 1;
     }
-    tree[element].frequenciesSum++;
+    priorityQueue[element].encodingTreeFrequency++;
 }
 
-void copyCountTreesLeafs(const short count, THuffmanCodingTree *copyTo, THuffmanCodingTree *copyFrom) {
-    for (int i = 0; i < (int) count; i++) {
-        copyTo[i] = copyFrom[i];
-    }
-}
-
-THuffmanCodingTree *inputTextToHuffmanLeaves(TRWFileBits *fileProcessing, size_t *realSize) {
-    THuffmanCodingTree *oldTree = malloc(sizeof(THuffmanCodingTree) * MAX_CHAR_NUM);
-    initHuffmanCodingTreeLeaves(oldTree);
-    TUnCharBuffer *buffer = malloc(sizeof(TUnCharBuffer));
-    short inputSize;
-    if ((inputSize = (short) fread(buffer->data, sizeof(unChar), BUFFER_SIZE, fileProcessing->inputStream)) < 0) {
-        printIOException();
-    }
-    if (isCountZero(inputSize)) {
+THuffmanTree *InputTextToPriorityQueue(TRWFileBits *fileProcessing, size_t *realSize) {
+    THuffmanTree *priorityQueue = malloc(sizeof(THuffmanTree) * MAX_CHAR_NUM);
+    InitHuffmanPriorityQueue(MAX_CHAR_NUM, priorityQueue);
+    size_t inputSize = fread(fileProcessing->bufferData, sizeof(ui8), BUFFER_SIZE, fileProcessing->inputStream);
+    if (inputSize == 0) {
         *realSize = 0;
-        free(buffer);
-        free(oldTree);
+        free(priorityQueue);
         return NULL;
     }
-    buffer->movingIdx = 0;
-    fillLeafsData(realSize, buffer, oldTree);
-    while (fileDidntEnd(buffer->movingIdx, inputSize)) {
-        fillLeafsData(realSize, buffer, oldTree);
-        if (isBufferOverflow(buffer)) {
-            updateBuffer(buffer, &inputSize, fileProcessing);
+    fileProcessing->bufferIdx = 0;
+    FillLeafsDataToPriorityQueue(realSize, fileProcessing, priorityQueue);
+    while (FileDoesntEnd(fileProcessing->bufferIdx, inputSize)) {
+        FillLeafsDataToPriorityQueue(realSize, fileProcessing, priorityQueue);
+        if (IsBufferOverflow(fileProcessing)) {
+            UpdateBuffer(&inputSize, fileProcessing);
         }
     }
-    free(buffer);
-    qsort(oldTree, MAX_CHAR_NUM, sizeof(THuffmanCodingTree), leavesComparator);
-    THuffmanCodingTree *realTree = malloc(sizeof(THuffmanCodingTree) * (*realSize));
-    copyCountTreesLeafs(*realSize, realTree, oldTree);
-    free(oldTree);
+    qsort(priorityQueue, MAX_CHAR_NUM, sizeof(THuffmanTree), ComparatorForPriorityQueueElements);
     fclose(fileProcessing->inputStream);
-    return realTree;
+    return priorityQueue;
 }
 
-void swapTwoVertices(THuffmanCodingTree *first, THuffmanCodingTree *second) {
-    THuffmanCodingTree saveCopy = *first;
+void SwapPriorityQueueElements(THuffmanTree *first, THuffmanTree *second) {
+    THuffmanTree saveCopy = *first;
     *first = *second;
     *second = saveCopy;
 }
 
-void raiseVertexToTheTop(THuffmanCodingTree *tree, size_t currentIndex) {
+void RaiseElementToTheTopInBinHeap(size_t currentIndex, THuffmanTree *priorityQueue) {
     while ((currentIndex + 1) / 2 != 0 &&
-           tree[currentIndex].frequenciesSum < tree[(currentIndex - 1) / 2].frequenciesSum) {
-        swapTwoVertices(&tree[currentIndex], &tree[(currentIndex - 1) / 2]);
+           priorityQueue[currentIndex].encodingTreeFrequency < priorityQueue[(currentIndex - 1) / 2].encodingTreeFrequency) {
+        SwapPriorityQueueElements(&priorityQueue[currentIndex], &priorityQueue[(currentIndex - 1) / 2]);
         currentIndex = (currentIndex - 1) / 2;
     }
 }
 
-bool isItRoot(const size_t currentIdx) {
-    return currentIdx == 0;
+bool IsNotThereNextDataToHeapify(const int idxQueue) {
+    return idxQueue <= 0;
 }
 
-void getTwoMinLeavesByFrequencies(THuffmanCodingTree *tree, unsigned int currentIdx) {
-    for (int i = 0; i < 2; i++) {
-        if (isItRoot(currentIdx)) {
-            return;
-        }
-        swapTwoVertices(&tree[0], &tree[currentIdx]);
-        currentIdx--;
-        size_t movementIdx = 0;
-        size_t firstChildIdx = 1;
-        size_t secondChildIdx = 2;
-        while (firstChildIdx <= currentIdx &&
-               (tree[movementIdx].frequenciesSum > tree[firstChildIdx].frequenciesSum ||
-                tree[movementIdx].frequenciesSum > tree[secondChildIdx].frequenciesSum)) {
-            if (secondChildIdx == currentIdx + 1) {
-                if (tree[movementIdx].frequenciesSum > tree[firstChildIdx].frequenciesSum) {
-                    swapTwoVertices(&tree[movementIdx], &tree[firstChildIdx]);
-                }
-                movementIdx = firstChildIdx;
-            } else if (tree[firstChildIdx].frequenciesSum <= tree[secondChildIdx].frequenciesSum) {
-                swapTwoVertices(&tree[movementIdx], &tree[firstChildIdx]);
-                movementIdx = firstChildIdx;
-            } else {
-                swapTwoVertices(&tree[movementIdx], &tree[secondChildIdx]);
-                movementIdx = secondChildIdx;
-            }
-            firstChildIdx = movementIdx * 2 + 1;
-            secondChildIdx = movementIdx * 2 + 2;
-        }
-    }
-}
-
-void copyCountElements(const size_t count, const unChar *copyFrom, unChar *copyTo) {
-    for (size_t i = 0; i < count; i++) {
-        copyTo[i] = copyFrom[i];
-    }
-}
-
-void createCodesTableAndTreeSequence(THuffmanCodingTree *root, int dynamicCodesIdx, size_t *tableIdx,
-                                     TCodesTable *codesTable, TTreeSequence *sequence) {
+void CreateCodesTable(int dynamicCodesIdx, THuffmanTree *root, size_t *tableIdx,
+                      TCodesTable *codesTable, ui8 *dynamicSymbolsBinaryCode) {
     if (root->leftSubtree != NULL) {
-        sequence->sequenceContainer[sequence->sequenceCount] = '1'; // T in sequence
-        sequence->sequenceCount++;
         dynamicCodesIdx++;
-        dynamicSymbolsBinaryCode[dynamicCodesIdx - 1] = '0';
-        createCodesTableAndTreeSequence(root->leftSubtree, dynamicCodesIdx, tableIdx, codesTable, sequence);
+        dynamicSymbolsBinaryCode[dynamicCodesIdx - 1] = 0;
+        CreateCodesTable(dynamicCodesIdx, root->leftSubtree, tableIdx, codesTable,
+                         dynamicSymbolsBinaryCode);
         dynamicCodesIdx--;
     }
     if (root->rightSubtree != NULL) {
         dynamicCodesIdx++;
-        dynamicSymbolsBinaryCode[dynamicCodesIdx - 1] = '1';
-        createCodesTableAndTreeSequence(root->rightSubtree, dynamicCodesIdx, tableIdx, codesTable, sequence);
+        dynamicSymbolsBinaryCode[dynamicCodesIdx - 1] = 1;
+        CreateCodesTable(dynamicCodesIdx, root->rightSubtree, tableIdx, codesTable,
+                         dynamicSymbolsBinaryCode);
         dynamicCodesIdx--;
     }
     if (root->leftSubtree == NULL && root->rightSubtree == NULL) {
-        if (isCountZero(dynamicCodesIdx)) {
-            dynamicSymbolsBinaryCode[0] = '0';
+        if (dynamicCodesIdx == 0) {
+            dynamicSymbolsBinaryCode[0] = 0;
             dynamicCodesIdx++;
         }
         codesTable[*tableIdx].character = root->character;
-        sequence->sequenceContainer[sequence->sequenceCount] = '0'; // L in sequence
-        sequence->sequenceCount++;
-        sequence->sequenceContainer[sequence->sequenceCount] = codesTable[*tableIdx].character;
-        sequence->sequenceCount++;
-        codesTable[*tableIdx].bits = malloc(sizeof(unChar) * dynamicCodesIdx);
-        copyCountElements(dynamicCodesIdx, dynamicSymbolsBinaryCode, codesTable[*tableIdx].bits);
+        codesTable[*tableIdx].bits = malloc(sizeof(ui8) * dynamicCodesIdx);
+        memcpy(codesTable[*tableIdx].bits, dynamicSymbolsBinaryCode, sizeof(ui8) * dynamicCodesIdx);
         codesTable[*tableIdx].bitsLen = dynamicCodesIdx;
         *tableIdx += 1;
     }
 }
 
-THuffmanCodingTree *createNewVertex(THuffmanCodingTree copyFrom) {
-    THuffmanCodingTree *vertex = malloc(sizeof(THuffmanCodingTree));
-    vertex->character = copyFrom.character;
-    vertex->rightSubtree = copyFrom.rightSubtree;
-    vertex->leftSubtree = copyFrom.leftSubtree;
-    vertex->frequenciesSum = copyFrom.frequenciesSum;
-    return vertex;
+THuffmanTree *CopyHuffmanTree(const THuffmanTree copyFrom) {
+    THuffmanTree *tree = malloc(sizeof(THuffmanTree));
+    tree->character = copyFrom.character;
+    tree->rightSubtree = copyFrom.rightSubtree;
+    tree->leftSubtree = copyFrom.leftSubtree;
+    tree->encodingTreeFrequency = copyFrom.encodingTreeFrequency;
+    return tree;
 }
 
-void buildHuffmanCodingTree(const size_t realSize, THuffmanCodingTree *tree) {
-    size_t currentIdx = realSize - 1;
-    if (isItRoot(currentIdx)) {
-        tree[currentIdx].frequenciesSum = 0;
+void HeapifyBinPriorityQueue(const int idxQueue, THuffmanTree *priorityQueue) {
+    if (IsNotThereNextDataToHeapify(idxQueue)) {
+        return;
     }
-    while (currentIdx != 0) {
-        getTwoMinLeavesByFrequencies(tree, currentIdx);
-        THuffmanCodingTree *unionLeaves = malloc(sizeof(THuffmanCodingTree));
-        unionLeaves->frequenciesSum = tree[currentIdx].frequenciesSum + tree[currentIdx - 1].frequenciesSum;
-        THuffmanCodingTree *leftChild = createNewVertex(tree[currentIdx]);
-        THuffmanCodingTree *rightChild = createNewVertex(tree[currentIdx - 1]);
+    int movementIdx = 0;
+    int firstChildIdx = 1;
+    int secondChildIdx = 2;
+    while (firstChildIdx <= idxQueue &&
+           (priorityQueue[movementIdx].encodingTreeFrequency > priorityQueue[firstChildIdx].encodingTreeFrequency ||
+            priorityQueue[movementIdx].encodingTreeFrequency > priorityQueue[secondChildIdx].encodingTreeFrequency)) {
+        if (secondChildIdx == idxQueue + 1) {
+            if (priorityQueue[movementIdx].encodingTreeFrequency > priorityQueue[firstChildIdx].encodingTreeFrequency) {
+                SwapPriorityQueueElements(&priorityQueue[movementIdx], &priorityQueue[firstChildIdx]);
+            }
+            movementIdx = firstChildIdx;
+        } else if (priorityQueue[firstChildIdx].encodingTreeFrequency <= priorityQueue[secondChildIdx].encodingTreeFrequency) {
+            SwapPriorityQueueElements(&priorityQueue[movementIdx], &priorityQueue[firstChildIdx]);
+            movementIdx = firstChildIdx;
+        } else {
+            SwapPriorityQueueElements(&priorityQueue[movementIdx], &priorityQueue[secondChildIdx]);
+            movementIdx = secondChildIdx;
+        }
+        firstChildIdx = movementIdx * 2 + 1;
+        secondChildIdx = movementIdx * 2 + 2;
+    }
+}
+
+THuffmanTree GetTopFromPriorityQueue(THuffmanTree *priorityQueue, int *idxQueue) {
+    THuffmanTree saveTop = priorityQueue[0];
+    SwapPriorityQueueElements(&priorityQueue[0], &priorityQueue[*idxQueue]);
+    *idxQueue -= 1;
+    HeapifyBinPriorityQueue(*idxQueue, priorityQueue);
+    return saveTop;
+}
+
+void PutTreeToPriorityQueue(int *idxQueue, THuffmanTree *unionLeaves, THuffmanTree *priorityQueue) {
+    *idxQueue += 1;
+    SwapPriorityQueueElements(&priorityQueue[*idxQueue], unionLeaves);
+    free(unionLeaves);
+    RaiseElementToTheTopInBinHeap(*idxQueue, priorityQueue);
+}
+
+THuffmanTree *BuildHuffmanCodingTree(const size_t realSize, THuffmanTree *priorityQueue) {
+    int idxQueue = (int) (realSize - 1);
+    if (idxQueue == 0) {
+        priorityQueue[idxQueue].encodingTreeFrequency = 0;
+    }
+    while (idxQueue != 0) {
+        THuffmanTree testOne = GetTopFromPriorityQueue(priorityQueue, &idxQueue);
+        THuffmanTree testTwo = GetTopFromPriorityQueue(priorityQueue, &idxQueue);
+        THuffmanTree *unionLeaves = malloc(sizeof(THuffmanTree));
+        unionLeaves->encodingTreeFrequency = testOne.encodingTreeFrequency + testTwo.encodingTreeFrequency;
+        THuffmanTree *leftChild = CopyHuffmanTree(testOne);
+        THuffmanTree *rightChild = CopyHuffmanTree(testTwo);
         unionLeaves->leftSubtree = leftChild;
         unionLeaves->rightSubtree = rightChild;
-        currentIdx--;
-        swapTwoVertices(&tree[currentIdx], unionLeaves);
-        free(unionLeaves);
-        raiseVertexToTheTop(tree, currentIdx);
+        PutTreeToPriorityQueue(&idxQueue, unionLeaves, priorityQueue);
     }
+    return CopyHuffmanTree(priorityQueue[0]);
 }
 
-void copyElementToBitsContainer(const unChar element, TRWFileBits *fileProcessing) {
+void CopyElementToBitsContainer(const ui8 element, TRWFileBits *fileProcessing) {
     fileProcessing->bitsContainer[fileProcessing->bitsIdx] = element;
     fileProcessing->bitsIdx++;
     if (fileProcessing->bitsIdx == BYTE_LENGTH) {
-        unChar elementToWrite = (unChar) getElementByBinaryCode(fileProcessing->bitsContainer);
-        fwrite(&elementToWrite, sizeof(unChar), 1, fileProcessing->outputStream);
+        ui8 elementToWrite = (ui8) GetElementByItsBinaryCode(fileProcessing->bitsContainer);
+        fwrite(&elementToWrite, sizeof(ui8), 1, fileProcessing->outputStream);
         fileProcessing->bitsIdx = 0;
     }
 }
 
-bool isSequenceElementAlphabetSymbol(const size_t seqIdx, TTreeSequence *sequence) {
-    return (sequence->sequenceContainer[seqIdx] != '0' && sequence->sequenceContainer[seqIdx] != '1') ||
-           (sequence->sequenceContainer[seqIdx - 1] == '0' && sequence->sequenceContainer[seqIdx - 2] != '0' &&
-            (sequence->sequenceContainer[seqIdx] == '0' || sequence->sequenceContainer[seqIdx] == '1'));
-}
-
-void writeTreeSequenceToFile(TTreeSequence *treeSequence, TRWFileBits *fileProcessing) {
-    fileProcessing->bitsIdx = 0;
-    for (size_t seqIdx = 0; seqIdx < treeSequence->sequenceCount; seqIdx++) {
-        if (!isItRoot(seqIdx)) {
-            if (isSequenceElementAlphabetSymbol(seqIdx, treeSequence)) {
-                unChar *binCode = getElementsBinaryCode(treeSequence->sequenceContainer[seqIdx]);
-                for (int i = 0; i < BYTE_LENGTH; i++) {
-                    copyElementToBitsContainer(binCode[i], fileProcessing);
-                }
-                free(binCode);
-                continue;
-            }
+void WriteHuffmanTreeToFile(THuffmanTree *root, TRWFileBits *fileProcessing) {
+    if (root->leftSubtree != NULL) {
+        CopyElementToBitsContainer(1, fileProcessing);
+        WriteHuffmanTreeToFile(root->leftSubtree, fileProcessing);
+    }
+    if (root->rightSubtree != NULL) {
+        WriteHuffmanTreeToFile(root->rightSubtree, fileProcessing);
+    }
+    if (root->leftSubtree == NULL && root->rightSubtree == NULL) {
+        CopyElementToBitsContainer(0, fileProcessing);
+        for (int i = 0; i < BYTE_LENGTH; i++) {
+            ui8 currentBit = GetElementsBit(root->character, BYTE_LENGTH - i - 1);
+            CopyElementToBitsContainer(currentBit, fileProcessing);
         }
-        copyElementToBitsContainer(treeSequence->sequenceContainer[seqIdx], fileProcessing);
     }
 }
 
-bool isNeededToWriteMissingBits(const short bitsIdx) {
+bool IsNeededToWriteMissingBits(const size_t bitsIdx) {
     return bitsIdx != 0 && bitsIdx <= BYTE_LENGTH;
 }
 
-void writeMissingBits(TRWFileBits *fileProcessing, unChar *neededBits) {
+void WriteMissingBits(TRWFileBits *fileProcessing, ui8 *neededBits) {
     for (int i = fileProcessing->bitsIdx; i < BYTE_LENGTH; i++) {
-        fileProcessing->bitsContainer[i] = '0';
+        fileProcessing->bitsContainer[i] = 0;
         *neededBits += 1;
     }
-    unChar elementToWrite = (unChar) getElementByBinaryCode(fileProcessing->bitsContainer);
-    fwrite(&elementToWrite, sizeof(unChar), 1, fileProcessing->outputStream);
+    ui8 elementToWrite = (ui8) GetElementByItsBinaryCode(fileProcessing->bitsContainer);
+    fwrite(&elementToWrite, sizeof(ui8), 1, fileProcessing->outputStream);
 }
 
-void encodeTextOfNewCharacters(const size_t realSize, TCodesTable *codesTable, TRWFileBits *fileProcessing,
-                               unChar *neededBits) {
-    TUnCharBuffer *buffer = malloc(sizeof(TUnCharBuffer));
-    unChar *tmpContainer = malloc(sizeof(unChar) * 3);
-    if (!fread(tmpContainer, sizeof(unChar), 3, fileProcessing->inputStream)) {
-        printIOException();
-    }
-    free(tmpContainer);
-    short inputSize;
-    if ((inputSize = (short) fread(buffer->data, sizeof(unChar), BUFFER_SIZE, fileProcessing->inputStream)) < 0) {
-        printIOException();
-    }
-    buffer->movingIdx = 0;
-    while (fileDidntEnd(buffer->movingIdx, inputSize)) {
+void EncodeTextWithNewCharacters(const size_t realSize, TCodesTable *codesTable,
+                                 TRWFileBits *fileProcessing, ui8 *neededBits) {
+    fseek(fileProcessing->inputStream, 3, SEEK_CUR);
+    size_t inputSize = fread(fileProcessing->bufferData, sizeof(ui8), BUFFER_SIZE, fileProcessing->inputStream);
+    fileProcessing->bufferIdx = 0;
+    while (FileDoesntEnd(fileProcessing->bufferIdx, inputSize)) {
         for (size_t tableIdx = 0; tableIdx < realSize; tableIdx++) {
-            if (codesTable[tableIdx].character == buffer->data[buffer->movingIdx]) {
+            if (codesTable[tableIdx].character == fileProcessing->bufferData[fileProcessing->bufferIdx]) {
                 for (int i = 0; i < codesTable[tableIdx].bitsLen; i++) {
-                    copyElementToBitsContainer(codesTable[tableIdx].bits[i], fileProcessing);
+                    CopyElementToBitsContainer(codesTable[tableIdx].bits[i], fileProcessing);
                 }
-                buffer->movingIdx++;
+                fileProcessing->bufferIdx++;
                 break;
             }
         }
-        if (isBufferOverflow(buffer)) {
-            updateBuffer(buffer, &inputSize, fileProcessing);
+        if (IsBufferOverflow(fileProcessing)) {
+            UpdateBuffer(&inputSize, fileProcessing);
         }
     }
-    free(buffer);
-    if (isNeededToWriteMissingBits(fileProcessing->bitsIdx)) {
-        writeMissingBits(fileProcessing, neededBits);
+    if (IsNeededToWriteMissingBits(fileProcessing->bitsIdx)) {
+        WriteMissingBits(fileProcessing, neededBits);
     }
 }
 
-void writeNewCodesToFile(const size_t realSize, TCodesTable *codesTable,
-                         TTreeSequence *sequence, TRWFileBits *fileProcessing, unChar *neededBits) {
+void WriteNewCodesToFile(const size_t realSize, THuffmanTree *huffmanTree,
+                         TCodesTable *codesTable,
+                         TRWFileBits *fileProcessing, ui8 *neededBits) {
     fileProcessing->inputStream = fopen("in.txt", "rb");
-    writeTreeSequenceToFile(sequence, fileProcessing);
-    encodeTextOfNewCharacters(realSize, codesTable, fileProcessing, neededBits);
+    fileProcessing->bitsIdx = 0;
+    WriteHuffmanTreeToFile(huffmanTree, fileProcessing);
+    EncodeTextWithNewCharacters(realSize, codesTable, fileProcessing, neededBits);
 }
 
-bool isBitsContainerOverflow(TRWFileBits *fileProcessing) {
+bool IsBitsContainerOverflow(const TRWFileBits *fileProcessing) {
     return fileProcessing->bitsIdx == BYTE_LENGTH;
 }
 
-void updateBitsContainer(TRWFileBits *fileProcessing, TUnCharBuffer *buffer, short *inputSize) {
+void UpdateBitsContainer(TRWFileBits *fileProcessing, size_t *inputSize) {
     fileProcessing->bitsIdx = 0;
-    buffer->movingIdx = (short) (buffer->movingIdx + 1);
-    if (isBufferOverflow(buffer)) {
-        updateBuffer(buffer, inputSize, fileProcessing);
+    fileProcessing->bufferIdx++;
+    if (IsBufferOverflow(fileProcessing)) {
+        UpdateBuffer(inputSize, fileProcessing);
     }
-    unChar *newElement = getElementsBinaryCode(buffer->data[buffer->movingIdx]);
     for (int copyIdx = 0; copyIdx < BYTE_LENGTH; copyIdx++) {
-        fileProcessing->bitsContainer[copyIdx] = newElement[copyIdx];
+        fileProcessing->bitsContainer[copyIdx] = GetElementsBit(fileProcessing->bufferData[fileProcessing->bufferIdx],
+                                                                BYTE_LENGTH - copyIdx - 1);
     }
-    free(newElement);
 }
 
-THuffmanDecodingTree *buildHuffmanDecodingTree(THuffmanDecodingTree *huffmanTree, int dynamicBinCodesIdx,
-                                               TRWFileBits *fileProcessing,
-                                               TUnCharBuffer *buffer,
-                                               bool *isItStartBuilding, short *countOfLeaves, short *inputSize) {
-    if (fileProcessing->bitsContainer[fileProcessing->bitsIdx] == '0' && *isItStartBuilding == true) {
-        *isItStartBuilding = false;
-        huffmanTree = malloc(sizeof(THuffmanDecodingTree));
-        huffmanTree->leftSubtree = NULL;
-        huffmanTree->rightSubtree = NULL;
-        huffmanTree->isLeaf = true;
-        unChar elementBits[BYTE_LENGTH];
-        for (int i = 0; i < BYTE_LENGTH; i++) {
-            fileProcessing->bitsIdx += 1;
-            if (isBitsContainerOverflow(fileProcessing)) {
-                updateBitsContainer(fileProcessing, buffer, inputSize);
-            }
-            elementBits[i] = fileProcessing->bitsContainer[fileProcessing->bitsIdx];
-        }
-        unChar element = getElementByBinaryCode(elementBits);
-        huffmanTree->characterCode = 0;
-        *countOfLeaves = 1;
-        huffmanTree->characterValue = element;
+void GetElementBits(ui8 *elementBits, TRWFileBits *fileProcessing, size_t *inputSize) {
+    for (int i = 0; i < BYTE_LENGTH; i++) {
         fileProcessing->bitsIdx += 1;
-        return huffmanTree;
-    } else if (fileProcessing->bitsContainer[fileProcessing->bitsIdx] == '1' && *isItStartBuilding == true) {
-        *isItStartBuilding = false;
-        huffmanTree = malloc(sizeof(THuffmanDecodingTree));
-        huffmanTree->leftSubtree = malloc(sizeof(THuffmanDecodingTree));
-        huffmanTree->rightSubtree = malloc(sizeof(THuffmanDecodingTree));
-        huffmanTree->isLeaf = false;
-        fileProcessing->bitsIdx += 1;
-        if (isBitsContainerOverflow(fileProcessing)) {
-            updateBitsContainer(fileProcessing, buffer, inputSize);
+        if (IsBitsContainerOverflow(fileProcessing)) {
+            UpdateBitsContainer(fileProcessing, inputSize);
         }
-        dynamicBinCodesIdx++;
-        dynamicSymbolsBinaryCode[dynamicBinCodesIdx - 1] = '0';
-        buildHuffmanDecodingTree(huffmanTree->leftSubtree, dynamicBinCodesIdx, fileProcessing, buffer,
-                                 isItStartBuilding,
-                                 countOfLeaves, inputSize);
-        dynamicSymbolsBinaryCode[dynamicBinCodesIdx - 1] = '1';
-        buildHuffmanDecodingTree(huffmanTree->rightSubtree, dynamicBinCodesIdx, fileProcessing, buffer,
-                                 isItStartBuilding,
-                                 countOfLeaves, inputSize);
-        return huffmanTree;
+        elementBits[i] = fileProcessing->bitsContainer[fileProcessing->bitsIdx];
     }
+}
 
-    if (fileProcessing->bitsContainer[fileProcessing->bitsIdx] == '1') {
-        huffmanTree->leftSubtree = malloc(sizeof(THuffmanDecodingTree));
-        huffmanTree->rightSubtree = malloc(sizeof(THuffmanDecodingTree));
-        huffmanTree->isLeaf = false;
-        fileProcessing->bitsIdx += 1;
-        if (isBitsContainerOverflow(fileProcessing)) {
-            updateBitsContainer(fileProcessing, buffer, inputSize);
+void FillDataToHuffmanDecodingTreeLeaf(THuffmanTree *huffmanTree,
+                                       TRWFileBits *fileProcessing,
+                                       size_t *leavesCount, size_t *inputSize) {
+    huffmanTree->leftSubtree = NULL;
+    huffmanTree->rightSubtree = NULL;
+    ui8 elementBits[BYTE_LENGTH];
+    GetElementBits(elementBits, fileProcessing, inputSize);
+    fileProcessing->bitsIdx++;
+    if (IsBitsContainerOverflow(fileProcessing)) {
+        UpdateBitsContainer(fileProcessing, inputSize);
+    }
+    ui8 element = GetElementByItsBinaryCode(elementBits);
+    *leavesCount += 1;
+    huffmanTree->character = element;
+}
+
+void GrowHuffmanDecodingTree(int dynamicBinCodesIdx, THuffmanTree *huffmanTree,
+                             TRWFileBits *fileProcessing,
+                             size_t *leavesCount, size_t *inputSize,
+                             ui8 *dynamicSymbolsBinaryCode) {
+    if (fileProcessing->bitsContainer[fileProcessing->bitsIdx] == 1) {
+        huffmanTree->leftSubtree = malloc(sizeof(THuffmanTree));
+        huffmanTree->rightSubtree = malloc(sizeof(THuffmanTree));
+        fileProcessing->bitsIdx++;
+        if (IsBitsContainerOverflow(fileProcessing)) {
+            UpdateBitsContainer(fileProcessing, inputSize);
         }
         dynamicBinCodesIdx++;
-        dynamicSymbolsBinaryCode[dynamicBinCodesIdx - 1] = '0';
-        buildHuffmanDecodingTree(huffmanTree->leftSubtree, dynamicBinCodesIdx, fileProcessing, buffer,
-                                 isItStartBuilding,
-                                 countOfLeaves, inputSize);
-        dynamicSymbolsBinaryCode[dynamicBinCodesIdx - 1] = '1';
-        buildHuffmanDecodingTree(huffmanTree->rightSubtree, dynamicBinCodesIdx, fileProcessing, buffer,
-                                 isItStartBuilding,
-                                 countOfLeaves, inputSize);
+        dynamicSymbolsBinaryCode[dynamicBinCodesIdx - 1] = 0;
+        GrowHuffmanDecodingTree(dynamicBinCodesIdx, huffmanTree->leftSubtree, fileProcessing,
+                                leavesCount, inputSize, dynamicSymbolsBinaryCode);
+        dynamicSymbolsBinaryCode[dynamicBinCodesIdx - 1] = 1;
+        GrowHuffmanDecodingTree(dynamicBinCodesIdx, huffmanTree->rightSubtree, fileProcessing,
+                                leavesCount, inputSize, dynamicSymbolsBinaryCode);
     } else {
-        huffmanTree->leftSubtree = NULL;
-        huffmanTree->rightSubtree = NULL;
-        huffmanTree->isLeaf = true;
-        unChar elementBits[BYTE_LENGTH];
-        for (int i = 0; i < BYTE_LENGTH; i++) {
-            fileProcessing->bitsIdx += 1;
-            if (isBitsContainerOverflow(fileProcessing)) {
-                updateBitsContainer(fileProcessing, buffer, inputSize);
-            }
-            elementBits[i] = fileProcessing->bitsContainer[fileProcessing->bitsIdx];
-        }
-        fileProcessing->bitsIdx += 1;
-        if (isBitsContainerOverflow(fileProcessing)) {
-            updateBitsContainer(fileProcessing, buffer, inputSize);
-        }
-        unChar element = getElementByBinaryCode(elementBits);
-        *countOfLeaves += 1;
-        huffmanTree->characterCode = 0;
-        for (int i = dynamicBinCodesIdx - 1; i >= 0; i--) {
-            huffmanTree->characterCode = (element << 1) | (dynamicSymbolsBinaryCode[i] - '0');
-        }
-        huffmanTree->characterValue = element;
+        FillDataToHuffmanDecodingTreeLeaf(huffmanTree, fileProcessing, leavesCount, inputSize);
     }
-    return NULL;
 }
 
-void findNextDecodingTreesLeaf(THuffmanDecodingTree *huffmanTree, unChar *code,
-                               TRWFileBits *fileProcessing, TUnCharBuffer *buffer, short *inputSize) {
-    fileProcessing->bitsIdx = (short) (fileProcessing->bitsIdx + 1);
-    if (isBitsContainerOverflow(fileProcessing)) {
-        updateBitsContainer(fileProcessing, buffer, inputSize);
+THuffmanTree *BuildHuffmanDecodingTree(int dynamicBinCodesIdx, THuffmanTree *huffmanTree,
+                                       TRWFileBits *fileProcessing,
+                                       size_t *leavesCount, size_t *inputSize,
+                                       ui8 *dynamicSymbolsBinaryCode) {
+    huffmanTree = malloc(sizeof(THuffmanTree));
+    if (fileProcessing->bitsContainer[fileProcessing->bitsIdx] == 0) {
+        FillDataToHuffmanDecodingTreeLeaf(huffmanTree, fileProcessing, leavesCount, inputSize);
+    } else {
+        GrowHuffmanDecodingTree(dynamicBinCodesIdx, huffmanTree, fileProcessing, leavesCount,
+                                inputSize, dynamicSymbolsBinaryCode);
     }
-    if (huffmanTree->isLeaf == false) {
-        if (fileProcessing->bitsContainer[fileProcessing->bitsIdx] == '0') {
-            findNextDecodingTreesLeaf(huffmanTree->leftSubtree, code, fileProcessing, buffer, inputSize);
+    return huffmanTree;
+}
+
+bool IsVertexLeaf(const THuffmanTree *huffmanTree) {
+    return huffmanTree->leftSubtree == NULL
+           && huffmanTree->rightSubtree == NULL;
+}
+
+void FindNextDecodingTreesLeaf(THuffmanTree *huffmanTree, ui8 *currentCode,
+                               TRWFileBits *fileProcessing, size_t *inputSize) {
+    fileProcessing->bitsIdx = fileProcessing->bitsIdx + 1;
+    if (IsBitsContainerOverflow(fileProcessing)) {
+        UpdateBitsContainer(fileProcessing, inputSize);
+    }
+    if (IsVertexLeaf(huffmanTree)) {
+        *currentCode = (ui8) huffmanTree->character;
+    } else {
+        if (fileProcessing->bitsContainer[fileProcessing->bitsIdx] == 0) {
+            FindNextDecodingTreesLeaf(huffmanTree->leftSubtree, currentCode, fileProcessing, inputSize);
         } else {
-            findNextDecodingTreesLeaf(huffmanTree->rightSubtree, code, fileProcessing, buffer, inputSize);
+            FindNextDecodingTreesLeaf(huffmanTree->rightSubtree, currentCode, fileProcessing, inputSize);
         }
-    } else {
-        *code = (unChar) huffmanTree->characterValue;
     }
 }
 
-bool areMissingBitsReached(const short inputSize, const char howManyBitsMissing, TRWFileBits *fileProcessing,
-                           TUnCharBuffer *buffer) {
-    return buffer->movingIdx == inputSize - 1 && fileProcessing->bitsIdx + howManyBitsMissing == BYTE_LENGTH &&
+bool AreMissingBitsReached(const size_t inputSize, const char howManyBitsMissing, TRWFileBits *fileProcessing) {
+    return fileProcessing->bufferIdx == inputSize - 1 &&
+           fileProcessing->bitsIdx + howManyBitsMissing == BYTE_LENGTH &&
            inputSize < BUFFER_SIZE;
 }
 
-void printNativeTextByHuffmanTree(const char howManyBitsMissing, THuffmanDecodingTree *huffmanTree,
-                                  TRWFileBits *fileProcessing,
-                                  TUnCharBuffer *buffer, short countOfLeaves, short *inputSize) {
-    if (isBitsContainerOverflow(fileProcessing)) {
-        updateBitsContainer(fileProcessing, buffer, inputSize);
+void PrintNativeTextByHuffmanTree(const size_t leavesCount, const char howManyBitsMissing, THuffmanTree *huffmanTree,
+                                  TRWFileBits *fileProcessing, size_t *inputSize) {
+    if (IsBitsContainerOverflow(fileProcessing)) {
+        UpdateBitsContainer(fileProcessing, inputSize);
     }
-    while (fileDidntEnd(buffer->movingIdx, *inputSize)) {
-        if (fileProcessing->bitsContainer[fileProcessing->bitsIdx] == '0') {
-            if (areMissingBitsReached(*inputSize, howManyBitsMissing, fileProcessing, buffer)) {
+    while (FileDoesntEnd(fileProcessing->bufferIdx, *inputSize)) {
+        ui8 code;
+        if (fileProcessing->bitsContainer[fileProcessing->bitsIdx] == 0) {
+            if (AreMissingBitsReached(*inputSize, howManyBitsMissing, fileProcessing)) {
                 break;
             }
-            unChar code;
-            if (countOfLeaves == 1) {
-                code = (unChar) huffmanTree->characterValue;
-                fwrite(&code, sizeof(unChar), 1, fileProcessing->outputStream);
+            if (leavesCount == 1) {
+                code = (ui8) huffmanTree->character;
+                fwrite(&code, sizeof(ui8), 1, fileProcessing->outputStream);
                 fileProcessing->bitsIdx++;
-                if (isBitsContainerOverflow(fileProcessing)) {
-                    updateBitsContainer(fileProcessing, buffer, inputSize);
+                if (IsBitsContainerOverflow(fileProcessing)) {
+                    UpdateBitsContainer(fileProcessing, inputSize);
                 }
                 continue;
             }
-            findNextDecodingTreesLeaf(huffmanTree->leftSubtree, &code, fileProcessing, buffer, inputSize);
-            fwrite(&code, sizeof(unChar), 1, fileProcessing->outputStream);
+            FindNextDecodingTreesLeaf(huffmanTree->leftSubtree, &code, fileProcessing, inputSize);
+            fwrite(&code, sizeof(ui8), 1, fileProcessing->outputStream);
         } else {
-            unChar code;
-            findNextDecodingTreesLeaf(huffmanTree->rightSubtree, &code, fileProcessing, buffer, inputSize);
-            fwrite(&code, sizeof(unChar), 1, fileProcessing->outputStream);
+            FindNextDecodingTreesLeaf(huffmanTree->rightSubtree, &code, fileProcessing, inputSize);
+            fwrite(&code, sizeof(ui8), 1, fileProcessing->outputStream);
         }
-        if (isBitsContainerOverflow(fileProcessing)) {
-            updateBitsContainer(fileProcessing, buffer, inputSize);
+        if (IsBitsContainerOverflow(fileProcessing)) {
+            UpdateBitsContainer(fileProcessing, inputSize);
         }
     }
 }
 
-void deleteCodesTable(const size_t realSize, TCodesTable *codesTable) {
+void DeleteCodesTable(const size_t realSize, TCodesTable *codesTable) {
     for (size_t i = 0; i < realSize; i++) {
         free(codesTable[i].bits);
     }
     free(codesTable);
 }
 
-void _deleteDecodingTree(THuffmanDecodingTree *vertex) {
-    if (vertex->leftSubtree) {
-        _deleteDecodingTree(vertex->leftSubtree);
-        free(vertex->leftSubtree);
-    }
-    if (vertex->rightSubtree) {
-        _deleteDecodingTree(vertex->rightSubtree);
-        free(vertex->rightSubtree);
-    }
-}
-
-void deleteDecodingTree(THuffmanDecodingTree *root) {
-    if (root) {
-        _deleteDecodingTree(root);
-        free(root);
-    }
-}
-
-void closeStreams(TRWFileBits *fileProcessing) {
+void CloseStreams(TRWFileBits *fileProcessing) {
     fclose(fileProcessing->inputStream);
     fclose(fileProcessing->outputStream);
     free(fileProcessing);
 }
 
-void _deleteCodingTree(THuffmanCodingTree *vertex) {
-    if (vertex->leftSubtree) {
-        _deleteCodingTree(vertex->leftSubtree);
-        free(vertex->leftSubtree);
+void _deleteHuffmanTree(THuffmanTree *tree) {
+    if (tree->leftSubtree) {
+        _deleteHuffmanTree(tree->leftSubtree);
+        free(tree->leftSubtree);
     }
-    if (vertex->rightSubtree) {
-        _deleteCodingTree(vertex->rightSubtree);
-        free(vertex->rightSubtree);
-    }
-}
-
-void deleteCodingTree(THuffmanCodingTree *root) {
-    if (root) {
-        _deleteCodingTree(root);
-        free(root);
+    if (tree->rightSubtree) {
+        _deleteHuffmanTree(tree->rightSubtree);
+        free(tree->rightSubtree);
     }
 }
 
-void getFirstBitsForDecodingTree(TRWFileBits *fileProcessing, TUnCharBuffer *buffer, short *inputSize) {
-    buffer->movingIdx = 0;
-    if ((*inputSize = (short) fread(buffer->data, sizeof(unChar), BUFFER_SIZE, fileProcessing->inputStream)) < 0) {
-        printIOException();
+void DeleteHuffmanTree(THuffmanTree *huffmanTree) {
+    if (huffmanTree) {
+        _deleteHuffmanTree(huffmanTree);
+        free(huffmanTree);
     }
+}
+
+void GetFirstBitsForDecodingTree(TRWFileBits *fileProcessing, size_t *inputSize) {
+    fileProcessing->bufferIdx = 0;
+    *inputSize = fread(fileProcessing->bufferData, sizeof(ui8), BUFFER_SIZE,
+                       fileProcessing->inputStream);
     fileProcessing->bitsIdx = 0;
-    unChar *newElement = getElementsBinaryCode(buffer->data[buffer->movingIdx]);
-    for (int i = 0; i < BYTE_LENGTH; i++) {
-        fileProcessing->bitsContainer[i] = newElement[i];
+    for (int copyIdx = 0; copyIdx < BYTE_LENGTH; copyIdx++) {
+        fileProcessing->bitsContainer[copyIdx] = GetElementsBit(fileProcessing->bufferData[fileProcessing->bufferIdx],
+                                                                BYTE_LENGTH - copyIdx - 1);
     }
-    free(newElement);
 }
 
-void writeInfoAboutEmptyFile(TRWFileBits *fileProcessing) {
+void WriteInfoAboutEmptyFile(TRWFileBits *fileProcessing) {
     fseek(fileProcessing->outputStream, 0, SEEK_SET);
     char emptyFileValue = FILE_EMPTY;
     fwrite(&emptyFileValue, sizeof(char), 1, fileProcessing->outputStream);
 }
 
-bool isNativeFileWasEmpty(char controlValue) {
+bool IsNativeFileWasEmpty(char controlValue) {
     return controlValue == FILE_EMPTY;
 }
 
@@ -606,57 +495,54 @@ int main(void) {
     TRWFileBits *fileProcessing = malloc(sizeof(TRWFileBits));
     fileProcessing->inputStream = fopen("in.txt", "rb");
     fileProcessing->outputStream = fopen("out.txt", "wb");
-    unChar *workingDirection = malloc(sizeof(unChar) * 3);
-    if (fread(workingDirection, sizeof(unChar), 3, fileProcessing->inputStream) != 3) {
-        printIOException();
-    }
+    ui8 *workingDirection = malloc(sizeof(ui8) * 3);
+    if (fread(workingDirection, sizeof(ui8), 3, fileProcessing->inputStream) != 3) {}
     if (workingDirection[0] == ZIP_TEXT) {
         fseek(fileProcessing->outputStream, 1, SEEK_CUR);
         size_t realTextElementsNumber = 0;
-        THuffmanCodingTree *huffmanTree = inputTextToHuffmanLeaves(fileProcessing, &realTextElementsNumber);
-        if (isCountZero(realTextElementsNumber)) {
-            writeInfoAboutEmptyFile(fileProcessing);
-            closeStreams(fileProcessing);
+        THuffmanTree *priorityQueue = InputTextToPriorityQueue(fileProcessing, &realTextElementsNumber);
+        if (realTextElementsNumber == 0) {
+            WriteInfoAboutEmptyFile(fileProcessing);
+            CloseStreams(fileProcessing);
+            free(priorityQueue);
             free(workingDirection);
             return EXIT_SUCCESS;
         }
-        buildHuffmanCodingTree(realTextElementsNumber, huffmanTree);
+        THuffmanTree *huffmanTree = BuildHuffmanCodingTree(realTextElementsNumber, priorityQueue);
+        free(priorityQueue);
         TCodesTable *codesTable = malloc(sizeof(TCodesTable) * realTextElementsNumber);
         size_t codesTableIdx = 0;
-        unChar neededBits = 0;
-        TTreeSequence *treeSequence = malloc(sizeof(TTreeSequence));
-        treeSequence->sequenceCount = 0;
-        createCodesTableAndTreeSequence(huffmanTree, 0, &codesTableIdx, codesTable, treeSequence);
-        writeNewCodesToFile(realTextElementsNumber, codesTable, treeSequence, fileProcessing, &neededBits);
+        ui8 neededBits = 0;
+        ui8 dynamicSymbolsBinaryCode[MAX_CHAR_NUM];
+        CreateCodesTable(0, huffmanTree, &codesTableIdx, codesTable,
+                         dynamicSymbolsBinaryCode);
+        WriteNewCodesToFile(realTextElementsNumber, huffmanTree, codesTable, fileProcessing, &neededBits);
         fseek(fileProcessing->outputStream, 0, SEEK_SET);
-        fwrite(&neededBits, sizeof(unChar), 1, fileProcessing->outputStream);
-        free(treeSequence);
-        deleteCodingTree(huffmanTree);
-        deleteCodesTable(realTextElementsNumber, codesTable);
-        closeStreams(fileProcessing);
+        fwrite(&neededBits, sizeof(ui8), 1, fileProcessing->outputStream);
+        DeleteHuffmanTree(huffmanTree);
+        DeleteCodesTable(realTextElementsNumber, codesTable);
+        CloseStreams(fileProcessing);
     }
     if (workingDirection[0] == UNZIP_TEXT) {
         char howManyBitsAdded;
         if (!fread(&howManyBitsAdded, sizeof(char), 1, fileProcessing->inputStream)) {
-            printIOException();
         }
-        if (isNativeFileWasEmpty(howManyBitsAdded)) {
+        if (IsNativeFileWasEmpty(howManyBitsAdded)) {
             free(workingDirection);
+            CloseStreams(fileProcessing);
             return EXIT_SUCCESS;
         }
-        THuffmanDecodingTree *huffmanTree = NULL;
-        TUnCharBuffer *buffer = malloc(sizeof(TUnCharBuffer));
-        short currentInputSize;
-        getFirstBitsForDecodingTree(fileProcessing, buffer, &currentInputSize);
-        bool isItStartBuilding = true;
-        short leavesCount = 0;
-        huffmanTree = buildHuffmanDecodingTree(huffmanTree, 0, fileProcessing, buffer, &isItStartBuilding,
-                                               &leavesCount, &currentInputSize);
-        printNativeTextByHuffmanTree(howManyBitsAdded, huffmanTree, fileProcessing, buffer, leavesCount,
+        THuffmanTree *huffmanTree = NULL;
+        size_t currentInputSize;
+        GetFirstBitsForDecodingTree(fileProcessing, &currentInputSize);
+        size_t leavesCount = 0;
+        ui8 dynamicSymbolsBinaryCode[MAX_CHAR_NUM];
+        huffmanTree = BuildHuffmanDecodingTree(0, huffmanTree, fileProcessing,
+                                               &leavesCount, &currentInputSize, dynamicSymbolsBinaryCode);
+        PrintNativeTextByHuffmanTree(leavesCount, howManyBitsAdded, huffmanTree, fileProcessing,
                                      &currentInputSize);
-        free(buffer);
-        closeStreams(fileProcessing);
-        deleteDecodingTree(huffmanTree);
+        CloseStreams(fileProcessing);
+        DeleteHuffmanTree(huffmanTree);
     }
     free(workingDirection);
     return EXIT_SUCCESS;
